@@ -13,4 +13,15 @@ def check_notebook_vars():
     
     
     
+### Validate Data
+def validate_jsonlines(filename):
     
+    with open(filename, 'r') as jfile:
+        for line in jfile:
+            try:
+                line_loaded = json.loads(line)
+            except Exception as e:
+                print(e)
+                print('error in line {}'.format(line))
+    
+validate_jsonlines('amazon_augmented_train.json')  
