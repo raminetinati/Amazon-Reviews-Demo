@@ -53,9 +53,9 @@ Let's just take a look at what the tablular form of the data looks like to get a
 
 
 
-
 |marketplace |   customer_id   |  review_id    |   product_id  |    product_parent | product_title  | product_category        star_rating  |  helpful_votes |  total_votes  |   vine   | verified_purchase    |   review_headline | review_body  |   review_date|
-|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-----------|-----------|---------|----------|--------------|-------------|----------------|-----------|-------------|-----------|----|-----------------|---------------|-----------|-----------|
+
 |US    |  22480053 |       R28HBXXO1UEVJT | 0843952016  |   34858117     |   The Rising  |    Books  | 5    |   0     |  0    |   N    | Great Twist on Zombie Mythos  |   I've known about this one for a long time, but just finally got around to reading it for the first time.  I enjoyed it a lot!  What I liked the most was how it took a tired premise and breathed new life into it by creating an entirely new twist on the zombie mythos.  A definite must read!  |   2012-05-03|
 
 
