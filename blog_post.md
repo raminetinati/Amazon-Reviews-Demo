@@ -46,11 +46,19 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 
 Let's first take a look at the data we're going to be using for this Use Case.
 
-```quote
-Amazon Customer Reviews (a.k.a. Product Reviews) is one of Amazon’s iconic products. In a period of over two decades since the first review in 1995, millions of Amazon customers have contributed over a hundred million reviews to express opinions and describe their experiences regarding products on the Amazon.com website. This makes Amazon Customer Reviews a rich source of information for academic researchers in the fields of Natural Language Processing (NLP), Information Retrieval (IR), and Machine Learning (ML), amongst others. Accordingly, we are releasing this data to further research in multiple disciplines related to understanding customer product experiences. Specifically, this dataset was constructed to represent a sample of customer evaluations and opinions, variation in the perception of a product across geographical regions, and promotional intent or bias in reviews.
+
+> Amazon Customer Reviews (a.k.a. Product Reviews) is one of Amazon’s iconic products. In a period of over two decades since the first review in 1995, millions of Amazon customers have contributed over a hundred million reviews to express opinions and describe their experiences regarding products on the Amazon.com website. This makes Amazon Customer Reviews a rich source of information for academic researchers in the fields of Natural Language Processing (NLP), Information Retrieval (IR), and Machine Learning (ML), amongst others. Accordingly, we are releasing this data to further research in multiple disciplines related to understanding customer product experiences. Specifically, this dataset was constructed to represent a sample of customer evaluations and opinions, variation in the perception of a product across geographical regions, and promotional intent or bias in reviews.
+
+Let's just take a look at what the tablular form of the data looks like to get an understanding of what we're working with.
 
 
-```
+
+
+|marketplace |   customer_id   |  review_id    |   product_id  |    product_parent | product_title  | product_category        star_rating  |  helpful_votes |  total_votes  |   vine   | verified_purchase    |   review_headline | review_body  |   review_date|
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|US    |  22480053 |       R28HBXXO1UEVJT | 0843952016  |   34858117     |   The Rising  |    Books  | 5    |   0     |  0    |   N    | Great Twist on Zombie Mythos  |   I've known about this one for a long time, but just finally got around to reading it for the first time.  I enjoyed it a lot!  What I liked the most was how it took a tired premise and breathed new life into it by creating an entirely new twist on the zombie mythos.  A definite must read!  |   2012-05-03|
+
+
 
 ### Dataset Details
 
