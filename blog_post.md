@@ -88,7 +88,7 @@ Before you can run this notebook, you'll need to have set up your own AWS Glue s
 
 #### Importing Data and Processing
 
-Our initial workflow is going to involve importing the data from the originating S3 bucket, and then loading it into a PySpark Dataframe so we can process some of the text fields.
+Our initial workflow is going to involve importing the data from the originating S3 bucket, and then loading it from a Spark RDD, into a PySpark Dataframe so we can process some of the text fields. We could leave it as a RDD, but for easier understanding and alignment with those familar with Pandas DataFrames, we'll use PySpark DataFrames.
 
 ```python
 reviews = spark.read.parquet("s3://amazon-reviews-pds/parquet")
@@ -127,7 +127,6 @@ df = df.withColumn('review_body_processed', preprocess_text(col('review_body')))
 
 The output of this data is a new column called `review_body_processed` which contained a cleaned, tokenized representation of the `review_body` content.
 
-|---------------------|---------------------- |
 |         review_body | review_body_processed |
 |---------------------|---------------------- |
 | I have this watch...| \[watch, believe, ... |
@@ -138,6 +137,39 @@ The output of this data is a new column called `review_body_processed` which con
 | The watches I bou...| \[watches, bought,... |
 | this is a very ni...| \[nice, time, piec... |
 | The product is as...| \[product, expecte... |
+
+Great, we're now at the point where we've processed all of our 145 million rows, and ready to store our data for analysis and deeper inspection. However, we probably don't want to store all of the columns for now, only the core attributes which we will use for processing. 
+
+As the review date is going to be can be used as a method to group the datapoints (in addition to the `product_category`), we going to create a column which will represent the `yyyy-mm` of our `review_date`, which will then be used to partition the data (and ultimately store the data in S3 PREFIX's which are labelled by the `yyyy-mm` String.
+
+```python
+#convert date to string with format yyyy-mm
+func_to_str =  udf (lambda x: datetime.strftime(x, '%Y-%m'))
+
+#apply the udf to the df
+df = df.withColumn('review_date_str', func_to_str(col('review_date')))
+
+```
+
+The above code snipping applies (using the `withColumn` method) a [user defined function](https://spark.apache.org/docs/latest/api/python/_modules/pyspark/sql/udf.html) to reformat the `review_date` timestamp, and store it in a new column.
+
+Once that's done, we're able to save the our chosen S3 bucket, partitioned by our new timestamp string. 
+
+```python
+
+#first partition
+df = df \
+  .repartition("review_date_str")
+
+#then save pyspark df
+df \
+  .write \
+  .partitionBy('review_date_str') \
+  .mode('overwrite') \
+  .csv("s3://demos-amazon-reviews/preprocessed_reviews_csvs/", header=True)
+```
+
+We've now saved our processed data back to S3, using CSV format. It's also possible to save this data to other formats (parquet, tsv, HIVE, etc), but we're goign to use CSV as we're goign to move next to Jupyter and Pandas to explore the data. Also, it's important to note that if we chose a different partitioning strategy, our folder structure would look different, we could even partition by multiple columsn, e.g. timestamp + category, which would then provide a finer level of granularity with regards to our data structure in S3.
 
 
 
