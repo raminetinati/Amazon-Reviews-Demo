@@ -88,7 +88,36 @@ Before you can run this notebook, you'll need to have set up your own AWS Glue s
 
 #### Importing Data and Processing
 
-Our initial workflow is going to involve importing the data from the originating S3 bucket, and then loading it into a PySpark
+Our initial workflow is going to involve importing the data from the originating S3 bucket, and then loading it into a PySpark Dataframe so we can process some of the text fields.
+
+```python
+reviews = spark.read.parquet("s3://amazon-reviews-pds/parquet")
+
+MIN_SENTENCE_LENGTH_IN_CHARS = 5
+MAX_SENTENCE_LENGTH_IN_CHARS = 5000
+
+df = reviews \
+  .distinct() \
+  .filter("marketplace = 'US'") \
+  .withColumn('body_len', F.length('review_body')) \
+  .filter(F.col('body_len') > MIN_SENTENCE_LENGTH_IN_CHARS) \
+  .filter(F.col('body_len') < MAX_SENTENCE_LENGTH_IN_CHARS) \
+
+record_count = df.count()
+print('Total Record Processing: {}'.format(record_count))
+```
+
+In the code snippit above, we're simply reading the Amazon Reviews data from Parquet format into our Spark cluster, and then converting it to a PySpark Dataframe, with some simple filters on the length of the length of the review_body text. We do this as we want to ensure that we are working with rows where the reviews are present, and are not the length of several pages. A more robust approach here would be to first select all the reviews, calculate the variance in review_body length, and then use some a suitable range based on some St.d value or orther property.
+
+The output of our processing results in the following:
+
+```sh
+Total Record Processing: 148,739,853
+```
+
+Depending on the size of the AWS Glue End-point, the processing time will vary. I chose 10 DPUs and it took around 15 minutes.
+
+Next, we're going to process the `review_body` column data, as we want to ensure it is cleaned and ready for use for different NLP tasks. If you've had any experience with text processing for data mining or NLP tasks, then removing terms and tokenizing is typically the first step to readying your data. We're goign to perform some basic stop word removal, stemming, and tokenizing and then add these new filtered reviews to a new column.
 
 
 
