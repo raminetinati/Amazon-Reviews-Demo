@@ -175,8 +175,160 @@ We've now saved our processed data back to S3, using CSV format. It's also possi
 
 ## Data Experimentation
 
+Based on the data processed during the first part of this use case, we're now going to explore and interrogate the data to understand how we can work towards achieving our proposed use case. The Data Experimentation [Notebook]() is used to develop a representative sample of the 145 million rows, so we can first perform some local experiments before scaling up our methods to the full dataset. Whilst working with the sample dataset may not always be necessary, it's good practice to first examine different methods against the original hypothesis or business objective to understand which methods are going to be suitable going forward. In most cases, when performing rapid prototyping of models, not all aspects will be fleshed out, thus using a sample helps speed up processing, as what we're looking for is an indication that the methods being applied will be suitable, rather than full evaluation of a set of methods (although, depending on the domain, this could be useful).
 
-to-Do
+
+### Building a Representative Sample
+
+Developing representative samples of a population is a rich area of multi-disciplinary reserarch, and depending on the domain or discipline, the methods used will differ. In this example project, we're going to use a non-probability based sampling method in order to construct a 1% sample of our data (~1.5 million rows). The sample will sample evenly across the time window of reviews (1995-06 to 2015-08), and sample 1% of records from each month. 
+
+However, before we can finalise our sampling strategy, it's import to first understand the count of records across the timeframe collected. To do this, we will run a series of queries across the data residing in S3 to obtain a view of the spread of data. A simple method we can use to get a count of the records per month is by using the `boto3` built in `s3` function, `select_object_context`, which allows us to execute an `SQL` expression on our datafiles in S3:
+
+```python
+
+s3 = boto3.client('s3')
+resp = s3.select_object_content(
+    Bucket=configs['bucket_name'],
+    Key=entry['path_with_prefix'],
+    ExpressionType='SQL',
+    Expression="SELECT count(*) FROM s3object s",
+    InputSerialization = {'CSV':
+                          {"FileHeaderInfo": "Use", 
+                           "AllowQuotedRecordDelimiter": True,
+                           "QuoteEscapeCharacter":"\\",
+                          }, 
+                          'CompressionType': 'NONE'},
+    OutputSerialization = {'CSV':{}},
+)
+
+for event in resp['Payload']:
+    if 'Records' in event:
+        records = event['Records']['Payload'].decode('utf-8')
+        return(int(records))
+
+```
+
+Using the `count()` syntax, we're able to obtain a quick view of the absolute count of each month's records, without having to transfer our data to our SageMaker instance, then load it into a dataframe, or perform some other shell based operation (e.g. `wc -l`). Note we do this using Spark in our previous step, but we're including this in the sample notebook to keep processing and analysis separate.
+
+![Record Count](img/record_count.png)
+
+
+Now we're aware of the distribution of records in our full dataset, we can build our representative sample. To to this, we're going to first use the count of rows in each month, and find the number of rows which represent the 1% sample. e.g.
+
+```
+rows_to_keep = (total_rows_in_a_month) * fixed_sample_pct
+```
+
+Based on the number of rows we need to extract from each month, we will then use an event sampling technique to extract the rows from the CSV files, by using the `nrows` parameter in the `read_csv` method for `pandas`
+
+```python
+df = pd.read_csv(S3_PATH_TO_CSV, nrows=int(rows_to_keep), header=0, error_bad_lines=False, escapechar="\\")
+```
+
+Putting this all together, we end up with the `generate_sample_method` to create our sample which we will use for the rest of the analysis.
+
+```python
+def generate_sample_dataset(configs, manifest, manifest_df_stats, sample_size_pct = 0.01):
+
+    dfs_sampled = []
+    index_key = configs['index_key']+'='
+
+    sample_meta = {}
+    #we take a pct of each of the rows, and then use random to select within each bin
+    #workout the overall pct we need to take
+    for idx,row in manifest_df_stats.iterrows():
+        to_sample = int(row['files'] * sample_size_pct)
+        if to_sample < 1:
+            to_sample = 1
+        date = row['date']    
+        tmp = {'rows':row['files'], 'samples': to_sample, 'sampled_added':0}
+        sample_meta[date] = tmp
+
+    #now we generate a new manifest
+    sampled_manifest = []
+    for entry in manifest:
+
+        date = entry['path'].split('/')[1].replace(index_key,'')
+        #get the meta data 
+        meta = sample_meta[date]
+        to_skip = meta['samples']
+        if to_skip == 1:
+            to_skip = 1
+        full_path = 's3://'+configs['bucket_name']+'/'+entry['path_with_prefix']
+        df = pd.read_csv(full_path, nrows=int(to_skip), header=0, error_bad_lines=False, escapechar="\\")
+        dfs_sampled.append(df)
+        
+    sampled_data = pd.concat(dfs_sampled)    
+    return sampled_data
+```
+
+As we're going to be using this sampled data in different SageMaker Notebooks, and the processing of this data takes time to complete (~10 mins), it's good practice to save the data to the local SageMaker instance, so we can reload it from local when required, rather than reprocessing the data:
+
+```python
+def save_load_sample_df_to_file(df, path = 'data', file_name_prefix='', operation='save', chunkSize = 100000):
+    loaded = []
+    #first split the df as it's too big probably
+    listOfDf = list()
+    if operation == 'save':
+
+        numberChunks = len(df) // chunkSize + 1
+        for i in range(numberChunks):
+            listOfDf.append(df[i*chunkSize:(i+1)*chunkSize])
+            
+        for i in range(0, len(listOfDf)):
+            chunk_df = listOfDf[i]
+            df_tmp_name_prefix = '{}/{}_part_{}.pkl'.format(path, file_name_prefix, str(i))
+            chunk_df.to_pickle(df_tmp_name_prefix) 
+                       
+        return df
+                       
+    if operation == 'load':
+        root_name = '{}/{}_*.pkl'.format(path, file_name_prefix)
+        files = glob.glob(root_name)
+        for fl in files:       
+            print(fl)
+            df = pd.read_pickle(fl)
+            loaded.append(df)
+                       
+        return pd.concat(loaded)
+    
+```
+
+Note with the above save/load method, chunking of the saved file is used as there are filesystem limitations when saving files larger than 4Gb.
+
+Finally, before we analyse the characteristics of the data, we need to ensure our DataFrame columns are correct, and we do a few final checks on the data to ensure that we don't encounter modelling issues going downstream.
+
+```python
+def ready_sample_data(df):
+    
+    print('Dataset Rows {}, Columns {}'.format(df.shape[0], df.shape[1]))
+    df['review_date']= pd.to_datetime(df['review_date']) 
+    #convert date to string with format yyyy-mm
+    df['review_date_str'] = df['review_date'].dt.strftime('%Y-%m')
+    
+    #here we need to do some basic filtering of rows, we don't want to start to model for 
+    df_len = df.shape[0]
+    pct_min = 0.01
+    min_product_category_row_count = df_len * pct_min 
+    
+    df = df.groupby('product_category').filter(lambda x : len(x)>min_product_category_row_count)
+    return df
+  
+```
+
+To ensure our sampling methods didn't cause problems with representing the different `product_category` labels, we do a simple filter by groups (grouped by the `product_category`), and then if the total number of rows in a group is less than 1% of the sample records, we drop the group. 
+
+Our final sample dataset, based on the parameters above:
+
+```sh
+After Processing Data: Dataset Rows 1,437,684 (49,609 records Dropped), Columns 19 
+```
+
+### Analysis and Inspection of the Data
+
+
+
+
 
 ## Model Experimentation
 
