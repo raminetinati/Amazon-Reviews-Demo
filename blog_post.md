@@ -119,7 +119,25 @@ Depending on the size of the AWS Glue End-point, the processing time will vary. 
 
 Next, we're going to process the `review_body` column data, as we want to ensure it is cleaned and ready for use for different NLP tasks. If you've had any experience with text processing for data mining or NLP tasks, then removing terms and tokenizing is typically the first step to readying your data. We're goign to perform some basic stop word removal, stemming, and tokenizing and then add these new filtered reviews to a new column.
 
+In order to make use of Spark's distributed processing capabilities, rather than using `apply` and `lambda` functions on a standard dataframe which executes iteratively (not compute efficient at all!), we're goign to use the `withColumn` pySpark method, and apply several functions to preprocess the data, namely, removing punctuation, stop words, and then tokenizing. As shown in the notebook, we're not using traditional NLP libraries such as NLTK for performing the stopword removal or tokenization, however, it's possible to use this if required,.
 
+```python
+df = df.withColumn('review_body_processed', preprocess_text(col('review_body')))
+```
+
+The output of this data is a new column called `review_body_processed` which contained a cleaned, tokenized representation of the `review_body` content.
+
+|---------------------|---------------------- |
+|         review_body | review_body_processed |
+|---------------------|---------------------- |
+| I have this watch...| \[watch, believe, ... |
+| I use this watch ...| \[use, watch, busi... |
+| Bought this watch...| \[bought, watch, a... |
+| My watch was dead...| \[watch, dead, arr... |
+| It is good watch ...| \[good, watch, rec... |
+| The watches I bou...| \[watches, bought,... |
+| this is a very ni...| \[nice, time, piec... |
+| The product is as...| \[product, expecte... |
 
 
 
