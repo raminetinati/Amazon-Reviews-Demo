@@ -326,7 +326,58 @@ After Processing Data: Dataset Rows 1,437,684 (49,609 records Dropped), Columns 
 
 ### Analysis and Inspection of the Data
 
+The initial analysis of the data will involve some simple transformations of the data to reveal the properties realted to the number of reviews per `product_category` label, the number of unqiue products within a given timewindow, and the number of reviews associated with a product. This will give us a good indicator on the reviews available across the different cateogories, and the spread of reviews across the products listed. Whilst this is not an exhaustive list of ways to analysis the data from a descriptive perspective, it does provide a first level of analysis, based on the sampling strategy which we have devised.
 
+To generate our analytical dataset, we're going to use some simple techniques to construct a an object which will hold all of our stats, which we can then transform into a dataframe and apply some operations to it to derive new insights. Although it is possible to do acheive the same results with groupings using Pandas native methods, the approach of constructing a statistical dataframe derived from the data allows for persistence, e.g. the data can be saved for future inspection and comparison.
+
+The full details of using this approach can be found in the `analyse_sample_dataset` method, but let's take a quick look one transformion:
+
+```python
+
+tmps = []
+
+#Group by the columns
+for name,group in df.groupby(['review_date_str','product_category']):
+
+    #Create a list of unique products
+    unique_products = len(group['product_id'].unique().tolist())
+    
+    #calculate the value of products which have more than one review
+    products_with_multiple_reviews = group.shape[0]- unique_products
+    
+    #add the values to a tmp object
+    tmp = {'review_date': name[0],
+           'product_category': name[1], 
+           'entries':group.shape[0], 
+           'unique_products':unique_products,
+          'products_with_multiple_reviews':products_with_multiple_reviews 
+          }
+    tmps.append(tmp)
+    
+#create a dataframe from our stats
+df_counts_cat_years = pd.DataFrame(tmps)
+
+```
+
+Using the above code snippit we're able to now generate a new view of our data for analysis:
+
+|entries|product_category|products_with_multiple_reviews|review_date|unique_products|FIELD6|
+|-------|----------------|------------------------------|-----------|---------------|------|
+|4746   |1209            |Outdoors                      |69         |2015-08-01     |1140  |
+|4747   |2131            |PC                            |306        |2015-08-01     |1825  |
+|4748   |1242            |Pet_Products                  |84         |2015-08-01     |1158  |
+|4749   |2119            |Shoes                         |18         |2015-08-01     |2101  |
+|4750   |2069            |Sports                        |73         |2015-08-01     |1996  |
+|4751   |636             |Tools                         |41         |2015-08-01     |595   |
+|4752   |1629            |Toys                          |54         |2015-08-01     |1575  |
+|4753   |878             |Video_DVD                     |17         |2015-08-01     |861   |
+|4754   |340             |Video_Games                   |26         |2015-08-01     |314   |
+|4755   |3954            |Wireless                      |508        |2015-08-01     |3446  |
+
+Which can be quite easily visualized to help inspect a wider timewindow
+
+
+![Category Record Count](img/aws_reviews_absolute_category.png)
 
 
 
