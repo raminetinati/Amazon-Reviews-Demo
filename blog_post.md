@@ -415,7 +415,49 @@ Let's now move onto the next step in our process which will be to develop some i
 
 ## Model Experimentation
 
-In this section we're going to be using the [Model Experimentation]() Notebook to begin to develop richer representations of our data, with the goal of determining the predictive capability of the `review_body` text data for our original use case.
+In this section we're going to be using the [Model Experimentation]() Notebook to begin to develop richer representations of our data, with the goal of determining the predictive capability of the `review_body` text data for our original use case. We're going to start with first reloading the sample dataset which we created in the previous section, which will be used as the basic of all the models going forward. 
+
+In order to develop a richer understanding of the data we're going to use for modelling purposes, we need to select the right tools to inspec the data. It's also important to build up our understand of the data by using techniques which incrementally increase in complexity. We're going to first start of with using TF-IDF to inspect our data from different dimentions, specifically, with relation to the `product_category`, the timeframe, and the `star_rating` of a reviews. 
+
+### Constructing Labelled Data
+
+In order to use our sample data for future modelling purposes, the first step will be to transform our sample dataset into a structure which only features the attributes we're after. The `transform_data_for_modelling_use` provides the necessary steps to to this, where we'll use the `review_body_processed` column for our modelling purposes. If we recall what we did during the initial pre-processing stage in Spark, we applied some NLP cleaning steps to generate tokens which we can use downstream. Now we get to use them. For our labels, we'll be generating them based on a selection of the attributes which we assume to be correct (e.g. `product_category`, and `star_rating`).
+
+For example, to generate a labelled dataset using the `product_category` attribute as the label:
+
+```python 
+#first let's get all our data in correct buckets of features and labels
+tmps = list()
+
+#first let's do the year_product-category grouping
+for name,group in df.groupby([df['review_date'].dt.year,'product_category']):
+    #build our label string
+    label = '{}_{}'.format(name[0],name[1])
+    tokens = list()
+    reviews = group['review_body_processed']
+    # reshape the tokens
+    for review in reviews:
+        res = str(review).strip('][').split(', ') 
+        tokens.append(res)
+    tmp = {'tokens':tokens, 'label':label }
+    tmps.append(tmp)
+
+df_year_product_category = pd.DataFrame(tmps)
+    
+```
+
+### TF-IDF
+
+TF-IDF is a common methodology for understanding the importance of words/strings within a document, or series of documents. For more information on TF-IDF, take a look [here](http://www.tfidf.com/). 
+
+#### TF-IDF - Product Category Temporal Analysis of Overlapping Terms
+
+For our first experiment, we're going to perform inspect the text in the `review_body` attributes, based on two aspects, the `product_category` and the timeframe in which the reviews were made. We're going to then examine how overtime, the reviews changed in language, which will be derived from the TF-IDF scores. The outcome of this analysis will reveal whether the there is a drastic shift in terms between the review language throuhgout the years, or whether there is a gradual increase in language use over the years (the Homophily effect). Depending on the outcome, we may not be able to build classifiers which group all reviews togerher as a _class_, but instead build a classifier for reviews based on another set of features. 
+
+
+
+
+
 
 
 
