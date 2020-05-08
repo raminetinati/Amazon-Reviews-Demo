@@ -575,7 +575,56 @@ Whilst the `product_category_star_rating` classifier did not yield results which
 
 With some level of confidence that the `review_body` can be used to predict the `product_category` label, we're going to use more state-of-the-art method for text processing, [Word Embeddings](https://en.wikipedia.org/wiki/Word_embedding). 
 
-To develop our Word Embeddings representation of our dataset, we're going to use Amazon SageMaker's built-in [BlazingText](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html) algorithm, which offers a distributed Word2Vec implementation, meaning that we have the option to scale our training pipeline when the dataset get's bigger. 
+To develop our Word Embeddings representation of our dataset, we're going to use Amazon SageMaker's built-in [BlazingText](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html) algorithm, which offers a distributed fasttext/word2vec implementation, meaning that we have the option to scale our training pipeline when the dataset gets bigger. 
+
+#### Prepping Data for BlazingText
+
+In order to use the Amazon SageMaker BlazingText algorithm, we need to prepare our data, and then upload it to Amazon S3. Similar to before the preparation of the data requires extracting the necessary features, constructing the label (as we're using BlazingText in supervised mode), and finally structuring the data in the required format suitable for the algorithm to consume.
+
+As before, we're going to be using the `product_category` attribute as the label, and the `review_body_processed` attribute as the input (feature) column. The construction of the data will involve developing the training and validation splits, and then saving them to tmp files locally, uploading them to S3, and then storing the S3 paths.
+
+```sh
+s3://path_to_train/data.train
+s3://path_to_validate/data.validate
+s3://path_to_model_output/
+```
+
+We're goign to be using the default `blazingtest` image, and runnign the model in supervised mode:
+
+```python
+
+#Find the URI of the latest BlazingText Image
+container = sagemaker.amazon.amazon_estimator.get_image_uri(region_name, "blazingtext", "latest")
+
+#Configure the SageMaker Estimator
+bt_model = sagemaker.estimator.Estimator(container,
+                                     global_vars['role'], 
+                                     train_instance_count=1, 
+                                     train_instance_type='ml.c5.18xlarge',
+                                     train_volume_size = 50,
+                                     train_max_run = 360000,
+                                     input_mode= 'File',
+                                     output_path=configs['s3_w2v_output_location'],
+                                     sagemaker_session=sess)
+
+#Set the hyperparameters
+bt_model.set_hyperparameters(mode="supervised",
+                             epochs=20,
+                             min_count=2,
+                             learning_rate=0.05,
+                             vector_dim=100,
+                             early_stopping=False,
+                             patience=4,
+                             min_epochs=10,
+                             word_ngrams=4)
+
+```
+
+The code snippet, we have the option to set a number of hyperparameters associated with the Word2Vec approach. Whilst there are details on the different hyperparameters listed in the BlazingText [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html), understanding how they affect the training time, and possible performance of the model is important before running a training job.
+- One of the most important hyperparameter will be the vector_dimension, which represents the word embedding vector size; a too small size vector will loose the information encoded at each training step, whilst too large a vector can yield diminishing results as convergence tends to stop (research papers find 300 is when deminishing results occur). For our example, we have used a dimension of 100, and experimented with a range between 50 and 200.
+- The word_ngrams is also  an important hyperparameter to tune, as it determines the size of the ngrams used, which when set to a size > 1, can help establish semantics between terms. This is particularly useful if the classifier is going to be used for 
+Syntactic accuracy. For more information, see [here](https://markroxor.github.io/gensim/static/notebooks/Word2Vec_FastText_Comparison.html)
+
 
 ## Scaling Models
 
