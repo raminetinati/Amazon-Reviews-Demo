@@ -454,10 +454,100 @@ TF-IDF is a common methodology for understanding the importance of words/strings
 
 For our first experiment, we're going to perform inspect the text in the `review_body` attributes, based on two aspects, the `product_category` and the timeframe in which the reviews were made. We're going to then examine how overtime, the reviews changed in language, which will be derived from the TF-IDF scores. The outcome of this analysis will reveal whether the there is a drastic shift in terms between the review language throuhgout the years, or whether there is a gradual increase in language use over the years (the Homophily effect). Depending on the outcome, we may not be able to build classifiers which group all reviews togerher as a _class_, but instead build a classifier for reviews based on another set of features. 
 
+In order to generate our scores, we first need to transform our data from text, to some numerical representation of counts per term. In order to acheive, this we will use the `CountVectorizer` from `scikit-learn`. As we're going to be using `product_category` or `product_cateogry_star_rating` as our groups (classes), we will only generate scores within each of the groups. For TF-IDF, we will need to create a 'document' of all tokens, and then use that to compute out Term Frequency for the given vectors, and then compute the token's Inverse Document Frequency, which then provides us with the TF-IDF weight of a given token, which we'll use for analysis and modelling. 
+
+```python
+data_grouped = dict()
+
+#First Generate our documents per Grouping
+for idx,row in df.iterrows(): #iterate the sample DataFrame
+
+    category, sub_cat = generate_label_category(row, grouping_type)
+    if category in data_grouped:
+        docs = data_grouped[category]
+    else:
+        docs = list()
+
+    tokens = row['tokens']
+    docs_tmp = [" ".join(x) for x in tokens]
+    docs = docs + docs_tmp
+    data_grouped[category] = docs
+
+#Second, for each of the groups (Categories/categories_ratings), find the TF IDF Scores.
+tfidf_handlers = dict()
+for k,v in data_grouped.items():
+    print(k, len(v))
+    cv = CountVectorizer(max_features=10000)
+    word_count_vector=cv.fit_transform(v)
+    feature_names=cv.get_feature_names()
+    tfidf_transformer=TfidfTransformer(smooth_idf=True, use_idf=True)
+    tfidf_transformer.fit(word_count_vector)
+    tfidf_handlers[k] = {'cv': cv, 'feature_names': feature_names, 'tfidf_transformer':tfidf_transformer}
+
+```
+
+Now, as we're interesting in seeing the shift in language overtime, we need to calculate the tf_idf scores for each of the rows in the labelled data dataset, taking into consideration the `product_category` associated with the row, as each product category has it's own previously fitted TF-IDF model. Once we generate the TF-IDF scores, the finally, select the top k keywords for each category at a particular timeinterval.
+
+```python
+
+tfidf_scores = {} #keep track of tf-idf scores for category by year
+for idx,row in df.iterrows():
+
+    #Obtain the Category and year Label
+    category, sub_cat = generate_label_category(row, grouping_type)
+    if category in tfidf_scores:
+        sub_scores = tfidf_scores[category]
+    else:
+        sub_scores = dict()
+
+    #Load the corresponding TF-IDF model which was previoisly generated
+    tfidf_transformer=tfidf_handlers[category]['tfidf_transformer']
+    feature_names=tfidf_handlers[category]['feature_names']
+    cv=tfidf_handlers[category]['cv']
+    tokens = row['tokens']
+    doc = [" ".join(x) for x in tokens]
 
 
+    tf_idf_vector=tfidf_transformer.transform(cv.transform(doc))
+    
+    #sort our vectors by score.
+    sorted_items=sort_coo(tf_idf_vector.tocoo())
+    
+    #use the extrct the top k vectors method 
+    keywords=extract_topn_from_vector(feature_names,sorted_items,100)
 
+    
+    sub_scores[sub_cat] = keywords
+    tfidf_scores[category] = sub_scores
 
+```
+
+We're now in a position to calculate the overlap in TF-IDF scores within each of the `product_category` labels, which will involve performing some simple set comparision usion the `union` function, and then calcuating the percentage of overlap between each of the years.
+
+```python
+
+tfidf_overlaps = []
+    for k,v in dic_of_scores.items():
+            ordered = OrderedDict(v)
+            keys = list(ordered.keys())
+            for i in range(0, len(keys)):
+                if i < len(keys)-1:
+                    year_n = keys[i]
+                    year_n1 = keys[i+1]
+                    bag = '{}_{}'.format(year_n,year_n1)
+                    total_terms = set(ordered[year_n].keys()).union(set(ordered[year_n1].keys()))
+                    overlap = set(ordered[year_n].keys()).intersection(set(ordered[year_n1].keys()))
+                    pct_overlap = len(overlap) / len(total_terms)*100
+                    tmp = {'category':k, 'year_from_to':year_n1, 'overlap_pct':pct_overlap}
+                    tfidf_overlaps.append(tmp)
+                
+    df = pd.DataFrame(tfidf_overlaps)
+    
+```
+
+Putting all the above snippits of code together, we can now, based on the labels in the dataset, generate our TF-IDF overlap scores.
+
+![TF-IDF Product_Category Temporal Overlap Scores](img/aws_reviews_tf_idf_overlap.png)
 
 
 
