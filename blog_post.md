@@ -361,23 +361,38 @@ df_counts_cat_years = pd.DataFrame(tmps)
 
 Using the above code snippit we're able to now generate a new view of our data for analysis:
 
-|entries|product_category|products_with_multiple_reviews|review_date|unique_products|FIELD6|
-|-------|----------------|------------------------------|-----------|---------------|------|
-|4746   |1209            |Outdoors                      |69         |2015-08-01     |1140  |
-|4747   |2131            |PC                            |306        |2015-08-01     |1825  |
-|4748   |1242            |Pet_Products                  |84         |2015-08-01     |1158  |
-|4749   |2119            |Shoes                         |18         |2015-08-01     |2101  |
-|4750   |2069            |Sports                        |73         |2015-08-01     |1996  |
-|4751   |636             |Tools                         |41         |2015-08-01     |595   |
-|4752   |1629            |Toys                          |54         |2015-08-01     |1575  |
-|4753   |878             |Video_DVD                     |17         |2015-08-01     |861   |
-|4754   |340             |Video_Games                   |26         |2015-08-01     |314   |
-|4755   |3954            |Wireless                      |508        |2015-08-01     |3446  |
+|entries |product_category  |products_with_multiple_reviews|review_date    |unique_products|
+|--------|------------------|------------------------------|---------------|---------------|
+|1209    |Outdoors          |69                            |2015-08-01     |1140           |
+|2131    |PC                |306                           |2015-08-01     |1825           |
+|1242    |Pet_Products      |84                            |2015-08-01     |1158           |
+|2119    |Shoes             |18                            |2015-08-01     |2101           |
+|2069    |Sports            |73                            |2015-08-01     |1996           |
+|636     |Tools             |41                            |2015-08-01     |595            |
+|1629    |Toys              |54                            |2015-08-01     |1575           |
+|878     |Video_DVD         |17                            |2015-08-01     |861            |
+|340     |Video_Games       |26                            |2015-08-01     |314            |
+|3954    |Wireless          |508                           |2015-08-01     |3446           |
 
 Which can be quite easily visualized to help inspect a wider timewindow
 
 
 ![Category Record Count](img/aws_reviews_absolute_category.png)
+
+
+Another source of analysis would be to inspec the `review_body` attribute, to understand how the reviews length differ, with respect to the timeframe, and the `product_categoy`. We can use the same methodology as before to construct a view of this data to provide insight into this. Like before, we're going to group our data and start to generate new counts based on the properties of the `review_body` attribute. 
+
+Our first inspection would be to examine the mean length of review comments per category:
+
+
+![Review Body Length Groups](img/aws_reviews_review_body_length_cat.png)
+
+
+And then we can drill down further to understand how this changes, with respect to the temporal characteristics:
+
+![Review Body Length Groups Temporal](img/aws_reviews_review_body_length_cat_temporal.png)
+
+
 
 
 
