@@ -549,6 +549,12 @@ Putting all the above snippits of code together, we can now, based on the labels
 
 ![TF-IDF Product_Category Temporal Overlap Scores](img/aws_reviews_tf_idf_overlap.png)
 
+If we take a look at the Overlaps between the years (fitted linear line), we can see a increase in language overlap in the majority of the categories (Electronics and Toys are the exception). Further inspection and refinement of this analysis could be performed to develop this narrative, but the key takeaway is that there exists consistency between years, within a given category.
+
+Similarly, we can apply the same principles to look at the language shift across reviews based on their star rating. As shown below, depending on the star rating, we notice positive or negative overlap. For instance, reviews rated 1 or 2 share similar language, compared to those of star rating 2 and 3, and there is increasing language overlap of reviews achieving a higher star rating. Intuatively this makes sense; reviews with lower ratings will most likely use terms which are very different from those of a higher rating (\[terrible, useless, bad] vs. \[great, high quality, excellent]).
+
+![TF-IDF Product_Category Rating Overlap Scores](img/aws_reviews_tf_idf_overlap_ratings.png)
+
 
 
 
