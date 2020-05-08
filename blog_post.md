@@ -172,6 +172,13 @@ df \
 We've now saved our processed data back to S3, using CSV format. It's also possible to save this data to other formats (parquet, tsv, HIVE, etc), but we're goign to use CSV as we're goign to move next to Jupyter and Pandas to explore the data. Also, it's important to note that if we chose a different partitioning strategy, our folder structure would look different, we could even partition by multiple columsn, e.g. timestamp + category, which would then provide a finer level of granularity with regards to our data structure in S3.
 
 
+**Section Recap**
+
+- Loaded Amazon Reviews Dataset from S3 into Spark using AWS Glue
+- Transform the data into Pyspark DataFrames which was filtered using a number of parameters 
+- Used Natural Language Techniques to pre-process the data
+- Saved the Data back to Amazon S3 for downstream use
+
 
 ## Data Experimentation
 
@@ -392,14 +399,25 @@ And then we can drill down further to understand how this changes, with respect 
 
 ![Review Body Length Groups Temporal](img/aws_reviews_review_body_length_cat_temporal.png) <!-- .element height="25%" width="25%" -->
 
+We're now starting to get a better understanding of the content of our data, how data points within the  `product_cateogry` groups differ, and how this may affect our use of the data for modelling. Not all product categories existed during the same time frame, some have more products than others, and with respect to the review_body, the length of reviews (chars) differen amongst categories. 
 
+Whilst more detailed inspection and evaluation of the data is required - we've only used a few of the attributes so far - the purpose of this section is to demonstrate how to use descriptive views of the data to gather insights, and made the first-level judgment on the data. We're also able to iterate on some of our initial hypothesis and assumptions, and revist the business objectives once again to ensure we're able to delivery what was initially set out.
+
+Let's now move onto the next step in our process which will be to develop some initial models to determine whether the `review_body` data can be used for predictive tasks.
+
+**Section Recap**
+
+- Developed a representative sampling strategy from our pre-processed data created by our AWS Glue workflow
+- Generated our sample dataset and saved it for future use
+- Developed a series of descriptive statistics to interrogate the data sample and improved our initial assumptions and hypthesis
 
 
 
 ## Model Experimentation
 
+In this section we're going to be using the [Model Experimentation]() Notebook to begin to develop richer representations of our data, with the goal of determining the predictive capability of the `review_body` text data for our original use case.
 
-to-Do
+
 
 
 ## Scaling Models
