@@ -390,7 +390,7 @@ Our first inspection would be to examine the mean length of review comments per 
 
 And then we can drill down further to understand how this changes, with respect to the temporal characteristics:
 
-![Review Body Length Groups Temporal](img/aws_reviews_review_body_length_cat_temporal.png)
+![Review Body Length Groups Temporal](img/aws_reviews_review_body_length_cat_temporal.png) <!-- .element height="25%" width="25%" -->
 
 
 
