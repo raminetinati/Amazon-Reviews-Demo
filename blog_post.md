@@ -450,7 +450,7 @@ df_year_product_category = pd.DataFrame(tmps)
 
 TF-IDF is a common methodology for understanding the importance of words/strings within a document, or series of documents. For more information on TF-IDF, take a look [here](http://www.tfidf.com/). 
 
-#### TF-IDF - Product Category Temporal Analysis of Overlapping Terms
+#### TF-IDF - Product Category Analysis of Overlapping Terms
 
 For our first experiment, we're going to perform inspect the text in the `review_body` attributes, based on two aspects, the `product_category` and the timeframe in which the reviews were made. We're going to then examine how overtime, the reviews changed in language, which will be derived from the TF-IDF scores. The outcome of this analysis will reveal whether the there is a drastic shift in terms between the review language throuhgout the years, or whether there is a gradual increase in language use over the years (the Homophily effect). Depending on the outcome, we may not be able to build classifiers which group all reviews togerher as a _class_, but instead build a classifier for reviews based on another set of features. 
 
@@ -556,7 +556,26 @@ Similarly, we can apply the same principles to look at the language shift across
 ![TF-IDF Product_Category Rating Overlap Scores](img/aws_reviews_tf_idf_overlap_ratings.png)
 
 
+### TF-IDF for modelling
 
+Using the TF-IDF scores which we've generated for the different classes (`product_category_year` and `product_category_star_rating`), we can now see how well the TDF-IDF scores can be used for predictive purposes. If there is significant differences in the language between the reviews based on the specific class, then we could use this to help build up our methods for addressing the first use case.
+
+In order to do this, we're going to take use the sample `CountVectorizer` and `TfidfTransformer` as before, and then use a Linear Support Vector Machine for multiclass prediction. For more information on SVM's and scikit's implementation of the `LinearSVC`, see [here](https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html). An SVM works well for this scenario as a kernal based model supports high-dimentional data (which this data is), however, the downside is that the training will be computationally expensive, and scaling becomes difficult.
+
+In our first modelling efforts using the `review_body` TF-IDF scores + SVC classifers, we evaluated (P+R) the following labels:
+
+- `product_category` - Precision: 60%, Recall: 60%
+- `product_category_year` - Precision: 59% Recall: 52%
+- `product_category_star_rating` - Precision: 35% Recall: 38%
+
+Whilst the `product_category_star_rating` classifier did not yield results which indicate predictive capability, using the `review_body` to predict the `product_category` demonstrates that with fairly little tuning, we're able to use the TF-IDF representations of the reviews to identify the correct `product_category`. Reflecting back on our original use case of using reviews to help reduce some of the overheads in product categorization and identifying wrong reviews, pursuing the developmebnt of a classifier which can detect correct product_category labels will be a useful venture.
+
+
+### Word Embeddings (Word2Vec using BlazingText)
+
+With some level of confidence that the `review_body` can be used to predict the `product_category` label, we're going to use more state-of-the-art method for text processing, [Word Embeddings](https://en.wikipedia.org/wiki/Word_embedding). 
+
+To develop our Word Embeddings representation of our dataset, we're going to use Amazon SageMaker's built-in [BlazingText](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html) algorithm, which offers a distributed Word2Vec implementation, meaning that we have the option to scale our training pipeline when the dataset get's bigger. 
 
 ## Scaling Models
 
