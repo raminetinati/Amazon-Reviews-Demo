@@ -565,7 +565,7 @@ In order to do this, we're going to take use the sample `CountVectorizer` and `T
 In our first modelling efforts using the `review_body` TF-IDF scores + SVC classifers, we evaluated (P+R) the following labels:
 
 - `product_category` - Precision: 60%, Recall: 60%
-- `product_category_year` - Precision: 59% Recall: 52%
+- `product_category_year` - Precision: 4% Recall: 0%
 - `product_category_star_rating` - Precision: 35% Recall: 38%
 
 Whilst the `product_category_star_rating` classifier did not yield results which indicate predictive capability, using the `review_body` to predict the `product_category` demonstrates that with fairly little tuning, we're able to use the TF-IDF representations of the reviews to identify the correct `product_category`. Reflecting back on our original use case of using reviews to help reduce some of the overheads in product categorization and identifying wrong reviews, pursuing the developmebnt of a classifier which can detect correct product_category labels will be a useful venture.
@@ -624,6 +624,8 @@ The code snippet, we have the option to set a number of hyperparameters associat
 - One of the most important hyperparameter will be the vector_dimension, which represents the word embedding vector size; a too small size vector will loose the information encoded at each training step, whilst too large a vector can yield diminishing results as convergence tends to stop (research papers find 300 is when deminishing results occur). For our example, we have used a dimension of 100, and experimented with a range between 50 and 200.
 - The word_ngrams is also  an important hyperparameter to tune, as it determines the size of the ngrams used, which when set to a size > 1, can help establish semantics between terms. This is particularly useful if the classifier is going to be used for 
 Syntactic accuracy. For more information, see [here](https://markroxor.github.io/gensim/static/notebooks/Word2Vec_FastText_Comparison.html)
+
+
 
 
 ## Scaling Models
