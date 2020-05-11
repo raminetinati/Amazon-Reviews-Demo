@@ -870,8 +870,9 @@ train_data = train_data.shuffle(buffer_size=num_examples, reshuffle_each_iterati
                            .repeat(-1)
 ```
 
+### Fine-Tuning BERT
 
-Now we have our data in the correct structure, we're going to take this and use it to _fine tune_ our pre-trained `BERT` model.
+Now we have our data in the correct structure, we're going to take this and use it to _fine tune_ our pre-trained `BERT` model. We need to update the pre-trained model config with the new labels, and also define the type of Model we'll be using, in this example, we're going to be using `TFBertForSequenceClassification`, which allows us to perform multi-class prediction, where `Sequence` is just Transformer terminology for a String (one or multiple tokens).
 
 ```python
 
@@ -898,6 +899,23 @@ model.fit(train_data,
 
 As the training will happen locally on the SageMaker Instance, The training time will depend on the SageMaker EC2 instance type. Based on a `ml.m5.4xlarge`, the training time was ~5 hours.
 
+### Evaluation
+
+In order to evaluate our model, we're going to use the sample process as before with regards to the use of a classification report. In order to acheive this. we will have to perform some of the same steps as before to our data with regards to transforming the data points into tensors, and then we use the `TextClassificationPipeline` method to obtain the predicted label of the Amazon review text.
+
+```python 
+TO_FINETUNE = configs['bert_model_type']
+config = BertConfig.from_pretrained(TO_FINETUNE)
+tokenizer = BertTokenizer.from_pretrained(TO_FINETUNE)
+
+inference_pipeline = TextClassificationPipeline(model=model, 
+                                            tokenizer=tokenizer,
+                                            framework='tf',
+                                            device=-1) # -1 is CPU, >= 0 is GPU
+...
+```
+
+Due to the complexity of the BERT model, inferencing is much slower than Word2Vec, or traditional Models such as those found in Scikit-learn. The evaluation of ~2500 rows takes around 60 minutes depending on the EC2 Instance type used (GPU is preferred).
 
 
 
