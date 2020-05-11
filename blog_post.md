@@ -36,7 +36,7 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 - [Data Experimentation]() - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
     - Representative Samples
     - Descriptive Analysis
-- [Model Experimentation] - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
+- [Model Experimentation]() - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
     - TF-IDF
     - Word Embeddings
     - Transformers
@@ -806,9 +806,99 @@ We're now going to look at how one of the most recent advancements in NLP can be
 
 In terms of performance, BERT has raised the bar for many NLP tasks. It obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5% (7.7 point absolute improvement), MultiNLI accuracy to 86.7% (4.6% absolute improvement), SQuAD v1.1 question answering Test F1 to 93.2 (1.5 point absolute improvement) and SQuAD v2.0 Test F1 to 83.1 (5.1 point absolute improvement).
 
+#### HuggingFace Transformers and Pretrained Models
+
+The `transformers` library provides an integrated set of bidirectional encoder (transformer) models, including `BERT`, `BART`, and `XLM`. It also offers implementations in different Deep Learning Frameworks, including PyTorch and TensorFlow. For our workflow, we're going to be using TensorFlow, and the BERT pre-trained Model. More information on the different models can be found [here](https://huggingface.co/transformers/pretrained_models.html). We will also be using the pre-trained weights from the `bert-base-uncased` model, which comprises of a model with the following architecture:
+
+- 12-layers
+- 768-hidden
+- 12-heads
+- 110M parameters
+- Trained on lower-cased English text.
+
+In order to use the pre-trained model and weights, we will use the common technique of replacing the last layer of the model (the SoftMax layer (specifically, `SparseCategoricalCrossentropy`), and then add the same type of layer based on our classification task properties (the number of classes and labels)
+
 #### Data Preparation
 
-In order to us the TensorFlow [HuggingFace](https://huggingface.co/transformers/) Implementation of BERT, we're first going to have to convert our data into the necessary structure and data types which the TensorFlow framework can interpret and work with. Similar to Word2Vec where we had to create a vector representation of our vocabulary, we will do the same thing for our BERT model, but instead of calling them Vectors, we'll use the terminology, `tensor` (which is still a vector, just a generalized representation).
+To use the TensorFlow [HuggingFace](https://huggingface.co/transformers/) Implementation of BERT, we're first going to have to convert our data into the necessary structure and data types which the TensorFlow framework can interpret and work with. Similar to Word2Vec where we had to create a vector representation of our vocabulary, we will do the same thing for our BERT model, but instead of calling them Vectors, we'll use the terminology, `tensor` (which is still a vector, just a generalized representation).
+
+The first step is converting all our rows in the datagrame into a collection of `namedtuple` objects, which contain only the `processed_text` and `label` attributes. we then iterature through our tuples and apply the `Transformers` [`Tokenizer`](https://huggingface.co/transformers/main_classes/tokenizer.html) to our tuples. Unlike before, our tokenizer is going to used to return three objects, the `input_ids`, `token_type_ids`, and the `attention_mask`. 
+
+
+```python
+features = [] # -> will hold InputFeatures to be converted later
+InputFeatures = namedtuple('InputFeatures', ['input_ids', 'attention_mask', 'token_type_ids', 'label'])
+
+for REVIEW_TEXT in data:
+
+    input_dict = tokenizer.encode_plus(
+                REVIEW_TEXT,
+                add_special_tokens=True,
+                max_length=max_length, # truncates if len(s) > max_length
+                return_token_type_ids=True,
+                return_attention_mask=True,
+                pad_to_max_length=True, # pads to the right by default
+            )
+            
+    input_ids, token_type_ids, attention_mask = (input_dict["input_ids"],
+    input_dict["token_type_ids"], input_dict['attention_mask'])
+
+    features.append(
+        InputFeatures(
+            input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=e.category_index
+        )
+    )
+```
+
+Just to understand what these three outputs are used for:
+
+- `input ids` = token indices in the tokenizer's internal dict
+- `token_type_ids` = binary mask identifying different sequences in the model
+- `attention_mask` = binary mask indicating the positions of padded tokens so the model does not attend to them
+
+Side note on Attention Masks:
+
+> Attention mechanisms in neural networks, otherwise known as neural attention or just attention, is an attempt to implement the same action of selectively concentrating on a few relevant things, while ignoring others in deep neural networks. So, whenever the model generates a sentence, it searches for a set of positions in the encoder hidden states where the most relevant information is available. This idea is called ‘Attention’.
+
+Once we have our data in the correct structure and tensor representation, we can then perform the final step in converting the data into suitable batch sizes for performing the fine tuning of the model with the vocab in our dataset.
+
+```python 
+
+BATCH_SIZE = 16
+train_data = train_data.shuffle(buffer_size=num_examples, reshuffle_each_iteration=True) \
+                           .batch(BATCH_SIZE) \
+                           .repeat(-1)
+```
+
+
+Now we have our data in the correct structure, we're going to take this and use it to _fine tune_ our pre-trained `BERT` model.
+
+```python
+
+num_examples = len(tuples)
+
+config = BertConfig.from_pretrained(TO_FINETUNE, num_labels=num_labels)
+model = TFBertForSequenceClassification.from_pretrained(TO_FINETUNE, config=config)
+optimizer = tf.keras.optimizers.Adam(learning_rate=3e-05, epsilon=1e-08)
+loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+metric = tf.keras.metrics.SparseCategoricalCrossentropy(name='accuracy')
+
+model.compile(optimizer=optimizer,
+              loss=loss,
+              metrics=[metric])
+
+train_steps = num_examples // BATCH_SIZE
+
+model.fit(train_data, 
+          epochs=EPOCHS,
+          steps_per_epoch=train_steps,
+         )
+
+```
+
+As the training will happen locally on the SageMaker Instance, The training time will depend on the SageMaker EC2 instance type. Based on a `ml.m5.4xlarge`, the training time was ~5 hours.
+
+
 
 
 
