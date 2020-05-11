@@ -790,6 +790,22 @@ sagemaker.create_hyper_parameter_tuning_job(HyperParameterTuningJobName = tuning
 You can monitor the hyperparameter tuning job in the AWS Console, and when complete, evaluate the chosen hyperparameters (by selecting the correct model in the S3 Model output folder). For this sample dataset and hyperparameter tuning ranges, I gained an addition 11% in precision and recall, with the best performance reaching ~70% weighted Precision. + Recall). 
 
 
+### Bidirectional Encoder Representations from Transformers (aka BERT)
+
+We're now going to look at how one of the most recent advancements in NLP can be used to support our original use case. Let's just take a quick second to understand what BERT is, and why it has become extremely popular for use in different NLP tasks:
+
+> We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of tasks, such as question answering and language inference, without substantial task-specific architecture modifications. [1]
+
+[1. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova. 2018](https://arxiv.org/abs/1810.04805)
+
+In terms of performance, BERT has raised the bar for many NLP tasks. It obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5% (7.7 point absolute improvement), MultiNLI accuracy to 86.7% (4.6% absolute improvement), SQuAD v1.1 question answering Test F1 to 93.2 (1.5 point absolute improvement) and SQuAD v2.0 Test F1 to 83.1 (5.1 point absolute improvement).
+
+#### Data Preparation
+
+In order to us the TensorFlow [HuggingFace](https://huggingface.co/transformers/) Implementation of BERT, we're first going to have to convert our data into the necessary structure and data types which the TensorFlow framework can interpret and work with. Similar to Word2Vec where we had to create a vector representation of our vocabulary, we will do the same thing for our BERT model, but instead of calling them Vectors, we'll use the terminology, `tensor` (which is still a vector, just a generalized representation).
+
+
+
 ## Scaling Models
 
 Content to be added soon!
