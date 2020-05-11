@@ -34,8 +34,14 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 
 - [Data Preparation]() - How to use AWS Glue and SPARK to prepare and process large datasetes ready for analysis
 - [Data Experimentation]() - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
-- [Model Experimentatio] - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
+    - Representative Samples
+    - Descriptive Analysis
+- [Model Experimentation] - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
+    - TF-IDF
+    - Word Embeddings
+    - Transformers
 - [Modelling Scaling]() - Based on the model experiments, we'll scale up the model which yields the most suitable results for our use case
+    - Word2Vec: Scaling to 150 million records
 - [Graphing Data]() - Once we've established the correct models to acheive our predictive tasks, we need to find a way to structure our data to address some of the initial asks within the use case defined at the start of the project.
 - [Testing Framework]() - One of the critical aspects of introducting a new process within an organisation is to ensure we can test and evaluate our processes when in an operationalized state. This will involve some form of split testing. 
 - [Operationalizing]() - Finally, we need to architect our solution in order to ensure we can deploy the solution which can be scaled across an organisation. We'll explore the use of Serverless services such as AWS Lambda and Step Functions to achieve this.
@@ -446,7 +452,7 @@ df_year_product_category = pd.DataFrame(tmps)
     
 ```
 
-### TF-IDF
+### Approach 1: TF-IDF
 
 TF-IDF is a common methodology for understanding the importance of words/strings within a document, or series of documents. For more information on TF-IDF, take a look [here](http://www.tfidf.com/). 
 
@@ -571,7 +577,7 @@ In our first modelling efforts using the `review_body` TF-IDF scores + SVC class
 Whilst the `product_category_star_rating` classifier did not yield results which indicate predictive capability, using the `review_body` to predict the `product_category` demonstrates that with fairly little tuning, we're able to use the TF-IDF representations of the reviews to identify the correct `product_category`. Reflecting back on our original use case of using reviews to help reduce some of the overheads in product categorization and identifying wrong reviews, pursuing the developmebnt of a classifier which can detect correct product_category labels will be a useful venture.
 
 
-### Word Embeddings (Word2Vec using BlazingText)
+### Approach 2: Word Embeddings (Word2Vec using BlazingText)
 
 With some level of confidence that the `review_body` can be used to predict the `product_category` label, we're going to use more state-of-the-art method for text processing, [Word Embeddings](https://en.wikipedia.org/wiki/Word_embedding). 
 
@@ -790,7 +796,7 @@ sagemaker.create_hyper_parameter_tuning_job(HyperParameterTuningJobName = tuning
 You can monitor the hyperparameter tuning job in the AWS Console, and when complete, evaluate the chosen hyperparameters (by selecting the correct model in the S3 Model output folder). For this sample dataset and hyperparameter tuning ranges, I gained an addition 11% in precision and recall, with the best performance reaching ~70% weighted Precision. + Recall). 
 
 
-### Bidirectional Encoder Representations from Transformers (aka BERT)
+### Approach 3: Bidirectional Encoder Representations from Transformers (aka BERT)
 
 We're now going to look at how one of the most recent advancements in NLP can be used to support our original use case. Let's just take a quick second to understand what BERT is, and why it has become extremely popular for use in different NLP tasks:
 
