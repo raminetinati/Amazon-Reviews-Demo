@@ -715,10 +715,10 @@ Once we've predicted the class for all our rows in our data, we can now use a si
 
 [
     {
-        'label': ['class_label]
+        "label": ["class_label"]
     }, 
     {
-        'prob': [0.0]
+        "prob": [0.0]
     }
 ],
 [
@@ -759,12 +759,35 @@ Once we've predicted the class for all our rows in our data, we can now use a si
 |Video_DVD             |0.63            |0.64     |0.63  |12374   |       |
 |Video_Games           |0.65            |0.49     |0.56  |4388    |       |
 |Wireless              |0.54            |0.65     |0.59  |22488   |       |
-|accuracy              |0.59            |359421   |      |        |       |
+|-                     |-               |-        |-     |-       |-      |
+|accuracy              |0.59            |         |      |        |359421 |
 |macro                 |avg             |0.57     |0.53  |0.55    |359421 |
 |weighted              |avg             |0.59     |0.59  |0.59    |359421 |
 
+As show in the Classification report, the precision and recall scores for the different classes vary between 39% (e.g. tools), to 77% (e.g. Mobile_Apps), and similarly the range of recall scares share a smilar distribution. In comparision to the P+R scores of the TF-IDF + SVM approach, we're seeing on average around 5-10% increase in accuracy, and the training time take is nearly 50x faster, for the same dataset size.
 
+#### Hyperparameter Tuning
 
+As mentioned earlier, the selection of the hyperparameters plays an important part in being able to optimize the word2vec algorithm. We're goign to use SageMaker's HyperParameter tuning [functionality](https://docs.aws.amazon.com/sagemaker/latest/dg/automatic-model-tuning.html) to demonstrate how to tune several of the parameters in our model in order to obtain the most optimal settings. If you're familar with grid searching to optimize parameters, this is similar, however SageMaker's built in tuning functions offer more sophisticated options to prune the search space, rather than a brute force searching strategy. 
+
+In order to deploy a hyperparameter tuning job, we need to first generate two configuration files, the `tuning_job_config` and the `training_job_definition`. These are simply a key:value representation (dictonary if using python) of the parameters we're going to tune.
+
+If we take a look at the `generate_hyperparameter_tuning_config()` method in the Notebook, we can see we're going to tuning the `word_ngrams`, `vector_dim`, `window_size`, and `negative_samples` hyperparameter, each within their own Min and Max numerical ranges. In the same config we set our optimization metric, which in the case of the supervised BlazingText mode, will be `validation:accuracy`, and we set the type to Maximize (as we want to maximize the accuracy). We also need to set the number of training jobs and parallel training jobs that are run; it's important to note how this will affect the compute time as well as the ability to optimize the parameters. 
+
+- Running more hyperparameter tuning jobs concurrently gets more work done quickly, but a tuning job improves only through successive rounds of experiments. Typically, running one training job at a time achieves the best results with the least amount of compute time.
+- It's also important to be aware of what happens when you training in a distributed manner (e.g. when instance count > 1). When a training job runs on multiple instances, hyperparameter tuning uses the last-reported objective metric value from all instances of that training job as the value of the objective metric for that training job. Design distributed training jobs so that the objective metric reported is the one that you want. This will affect parallel running jobs.
+
+After creating the `tuning_job_config`, we need to create the `training_job_definition`, which is very similar to before; we point to the training and validation data S3 locations, and also provide the definition with which type of instances and the running time that will be used. Finally we can then call the `create_hyper_parameter_tuning_job` as shown below.
+
+```python
+tuning_job_name = job_name
+sagemaker.create_hyper_parameter_tuning_job(HyperParameterTuningJobName = tuning_job_name,
+                                               HyperParameterTuningJobConfig = global_vars['bt_tuning_job_config'],
+                                               TrainingJobDefinition = global_vars['bt_training_job_definition']) 
+                                               
+```
+    
+You can monitor the hyperparameter tuning job in the AWS Console, and when complete, evaluate the chosen hyperparameters (by selecting the correct model in the S3 Model output folder). For this sample dataset and hyperparameter tuning ranges, I gained an addition 11% in precision and recall, with the best performance reaching ~70% weighted Precision. + Recall). 
 
 
 ## Scaling Models
