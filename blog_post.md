@@ -589,7 +589,7 @@ s3://path_to_validate/data.validate
 s3://path_to_model_output/
 ```
 
-We're goign to be using the default `blazingtest` image, and runnign the model in supervised mode:
+We're going to be using the default `blazingtest` image, and runnign the model in supervised mode:
 
 ```python
 
@@ -620,12 +620,59 @@ bt_model.set_hyperparameters(mode="supervised",
 
 ```
 
-The code snippet, we have the option to set a number of hyperparameters associated with the Word2Vec approach. Whilst there are details on the different hyperparameters listed in the BlazingText [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html), understanding how they affect the training time, and possible performance of the model is important before running a training job.
+The code snippet, we have the option to set a number of hyperparameters associated with the Word2Vec approach. Whilst there are details on the different hyperparameters listed in the BlazingText [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/blazingtext.html), understanding how they affect the training time, and possible performance of the model is important before running a training job:
+
 - One of the most important hyperparameter will be the vector_dimension, which represents the word embedding vector size; a too small size vector will loose the information encoded at each training step, whilst too large a vector can yield diminishing results as convergence tends to stop (research papers find 300 is when deminishing results occur). For our example, we have used a dimension of 100, and experimented with a range between 50 and 200.
 - The word_ngrams is also  an important hyperparameter to tune, as it determines the size of the ngrams used, which when set to a size > 1, can help establish semantics between terms. This is particularly useful if the classifier is going to be used for 
 Syntactic accuracy. For more information, see [here](https://markroxor.github.io/gensim/static/notebooks/Word2Vec_FastText_Comparison.html)
+- Learning Rate - Setting the learning rate too big will cause issues with convergence with regards to the loss/error. We need to be careful not to set a too small learning rate too, or it will take too long to converge (and possibily never find a local/global mininimum).
 
 
+#### Training, Deploy, Evaluate
+
+Once we've configured our model's hyperparameters and data sources, we can execute the training process, which will initialize the necessary infrastructure (e.g. the number of instances set by the 'train_instance_count', and the type of instances), to run the given training job. 
+
+
+```python
+bt_model.fit(inputs=data_channels, logs=True)
+```
+
+It's important to remember that once the SageMaker training job is started, this will be happening not within the current Jupyter Environment, but as a job running in AWS ECS, and in order to monitor the job, you can use the CloudWatch Logs, which can be found in the [Amazon Web Console](https://console.aws.amazon.com/).
+
+
+Once our training has completed, we will be notified in the AWS Web Console, and if the Notebook is active still, the cell tha executed the code will be returned a simple output such as 
+
+```sh
+Total training time in seconds: 445.42
+#train_accuracy: 0.6559
+#validation_accuracy: 0.5614
+Number of validation examples: 34000
+```
+
+Before we can use the model to perform inferencing for evaluating how the model performed, we have to first host the model as an endpoint. In order to do this, we can either call the `.deploy()` method on the current model object from the notebook (if the Kernal/object is still available), or failing this - say we have restarted our notebook - we can load the model using the model output file, which is a tar.gz file containing the model's weights and architecture (this may differ depending on the framework used, MXNet, TF, Pytorch, etc). As this isn't commonly discussed, below is an example of how to create a Sagemaker Model endpoint with the model file.
+
+```python
+
+# First Firnd the Container
+container = sagemaker.amazon.amazon_estimator.get_image_uri(AWS_REGION_NAME, "blazingtext", "latest")
+# Model Path
+model_path = 's3://path_to_model/prefix_if_ness/model.tar.gz
+# Load the Model
+trained_model = sagemaker.model.Model(
+            model_data= model_path,
+            image= container,
+            role=sagemaker.session.role()
+        ) 
+        
+#now we can call the .deploy() method on our loaded model
+deployed_model = trained_model.deploy(
+    initial_instance_count = 3,
+    instance_type = 'ml.c5.18xlarge',
+    endpoint_name = configs['bt_model_name'],
+    accelerator_type = 'ml.eia1.medium',
+    update_endpoint = True
+)
+```
 
 
 ## Scaling Models
@@ -633,10 +680,46 @@ Syntactic accuracy. For more information, see [here](https://markroxor.github.io
 to-Do
 
 
+
+## Graphing Data
+
+
+
+## Testing Framework
+
+
 ## Operationalization
 
 
 to-Do
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
