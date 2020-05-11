@@ -674,26 +674,123 @@ deployed_model = trained_model.deploy(
 )
 ```
 
+Now that we have our SageMaker Model endpoint ready, we can now use the model's `.predict()` method to start to evaluate the model using the same precision and recall metrics as before. To do this, we're goint to take our test data which was previously saved to file, and then iterating through the records in smaller batches (rather than sending all the data in one go). We could also use the `Batch Transform` Sagemaker [functionality](https://docs.aws.amazon.com/sagemaker/latest/dg/how-it-works-batch.html) in order to perform predictions across the entire dataset, however, for consistency, we'll use a mini-batch approach in our workings.
+
+As shown in the `evaluate_model_predictions()` method, we're we're going to take the data, and split itn into smaller batches, and then convert the data into a json structure which contains the `review_body` text, along with an additional entry called `configuration`, which allows to set parameters such as `k`, which sets the number of classes and their confidence score associated with each prediction (this is similar to top_k classes for multiclass classifiers).
+
+```python
+
+batch_size = 10000
+batches = len(instances) // batch_size
+top_k = 1
+for i in range(0, batches):
+    
+    lower = batch_size * i
+    upper = batch_size * (i+1)
+    
+    if i == batches:
+        upper = len(instances)
+
+    instances_batch = instances[lower:upper]
+
+    payload = {
+                "instances":instances_batch,
+                "configuration": 
+                  {
+                      "k": top_k
+                  }
+              }
+
+    response = deployed_model.predict(json.dumps(payload))
+
+    predictions = json.loads(response)
+    
+    predictions_batches.append(predictions)
+    
+```
+
+Once we've predicted the class for all our rows in our data, we can now use a similar method as before to calculate the precision and recall scores for our different classes. the only difference here is that we need to unpack the responses that the SageMaker model returns, which is effectively in the following structure:
+
+```json
+
+[
+    {
+        'label': ['class_label]
+    }, 
+    {
+        'prob': [0.0]
+    }
+],
+[
+    ...
+]
+
+```
+
+|Class                 |Label           |precision|recall|f1-score|support|
+|----------------------|----------------|---------|------|--------|-------|
+|Apparel               |0.56            |0.66     |0.60  |15334   |       |
+|Automotive            |0.49            |0.45     |0.47  |8824    |       |
+|Baby                  |0.53            |0.42     |0.47  |4146    |       |
+|Beauty                |0.58            |0.62     |0.60  |12596   |       |
+|Books                 |0.65            |0.73     |0.69  |48164   |       |
+|Camera                |0.68            |0.52     |0.59  |4333    |       |
+|Digital_Ebook_Purchase|0.69            |0.66     |0.68  |42637   |       |
+|Digital_Music_Purchase|0.64            |0.36     |0.46  |4022    |       |
+|Digital_Video_Download|0.57            |0.53     |0.55  |9788    |       |
+|Electronics           |0.49            |0.47     |0.48  |8007    |       |
+|Grocery               |0.69            |0.63     |0.66  |5875    |       |
+|Health__Personal_Care |0.44            |0.45     |0.44  |12910   |       
+|Home                  |0.41            |0.47     |0.44  |15425   |       |
+|Home_Improvement      |0.40            |0.35     |0.37  |6651    |       |
+|Jewelry               |0.62            |0.54     |0.58  |4484    |       |
+|Kitchen               |0.60            |0.59     |0.60  |11784   |       |
+|Lawn_and_Garden       |0.47            |0.40     |0.43  |6409    |       |
+|Mobile_Apps           |0.77            |0.73     |0.75  |11954   |       |
+|Music                 |0.76            |0.83     |0.80  |11558   |       |
+|Office_Products       |0.51            |0.42     |0.46  |6232    |       |
+|Outdoors              |0.38            |0.29     |0.33  |5603    |       |
+|PC                    |0.59            |0.59     |0.59  |17222   |       |
+|Pet_Products          |0.73            |0.63     |0.67  |6327    |       |
+|Shoes                 |0.73            |0.71     |0.72  |10978   |       |
+|Sports                |0.40            |0.37     |0.38  |11837   |       |
+|Tools                 |0.39            |0.31     |0.35  |4409    |       |
+|Toys                  |0.51            |0.52     |0.52  |12662   |       |
+|Video_DVD             |0.63            |0.64     |0.63  |12374   |       |
+|Video_Games           |0.65            |0.49     |0.56  |4388    |       |
+|Wireless              |0.54            |0.65     |0.59  |22488   |       |
+|accuracy              |0.59            |359421   |      |        |       |
+|macro                 |avg             |0.57     |0.53  |0.55    |359421 |
+|weighted              |avg             |0.59     |0.59  |0.59    |359421 |
+
+
+
+
 
 ## Scaling Models
 
-to-Do
-
+Content to be added soon!
 
 
 ## Graphing Data
+
+Content to be added soon!
 
 
 
 ## Testing Framework
 
+Content to be added soon!
+
 
 ## Operationalization
 
 
-to-Do
+Content to be added soon!
 
 
+
+## Wrap Up
 
 
 
