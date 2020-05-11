@@ -941,8 +941,8 @@ For `PIPE` mode to work, we'll need to use the AugmentedManifest dataset structu
 In our example, as we're using BlazingText for supervised training, we will need the AugmentedManifest to look like:
 
 ```json
-{"source": "this is a sample review", label: 0}
-{"source": "this is another sample review", label: 1}
+{"source": "this is a sample review", "label": 0}
+{"source": "this is another sample review", "label": 1}
 ```
 
 It's important to note that the structure is of `jsonlines`, and the labels need to be converted to an `int` rather than the original text/string label.
@@ -1045,6 +1045,20 @@ As shown above, when using AugmentedManifest, the `s3_input` requires the `attri
 We can now execute the training cycle, which will kick off the distributed training job via AWS ECS. As the dataset is much larger than before, the training time will take significantly longer. For a `ml.c5.18xlarge` instance, the training job took 16 Hours to complete.
 
 ### Evaluation
+
+As before, we're first going to deploy our new model as a SageMaker Model Endpoint, and then we're going to be using a classifiction report for the precision and recall scores for the different classes in the dataset. We'll use the same batch method as before to compute the predictions, however, we'll need to use the Label mapping to convert the labels from the numerical identifier, to the String version. 
+
+```python
+for pred in predictions:
+        try:
+            idx = int(str(pred['label'][0]).replace('__label__',''))
+            y_hat.append(labels_mapping[idx])
+        except:
+            y_hat.append('UNKNOWN')
+```
+
+As shown in the snippit above, the response from the BlazingText Model will prepend the label with the String `__label__`, which will need to be removed before we can perform a lookup using our label mapping.
+
 
 
 
