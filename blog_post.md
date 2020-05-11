@@ -876,6 +876,7 @@ Now we have our data in the correct structure, we're going to take this and use 
 
 ```python
 
+TO_FINETUNE = 'bert_base_uncased'
 num_examples = len(tuples)
 
 config = BertConfig.from_pretrained(TO_FINETUNE, num_labels=num_labels)
@@ -904,7 +905,7 @@ As the training will happen locally on the SageMaker Instance, The training time
 In order to evaluate our model, we're going to use the sample process as before with regards to the use of a classification report. In order to acheive this. we will have to perform some of the same steps as before to our data with regards to transforming the data points into tensors, and then we use the `TextClassificationPipeline` method to obtain the predicted label of the Amazon review text.
 
 ```python 
-TO_FINETUNE = configs['bert_model_type']
+TO_FINETUNE = 'bert_base_uncased'
 config = BertConfig.from_pretrained(TO_FINETUNE)
 tokenizer = BertTokenizer.from_pretrained(TO_FINETUNE)
 
@@ -913,16 +914,139 @@ inference_pipeline = TextClassificationPipeline(model=model,
                                             framework='tf',
                                             device=-1) # -1 is CPU, >= 0 is GPU
 ...
+
+prediction = inference_pipeline(TEXT_TO_CLASSIFY)
+
 ```
 
 Due to the complexity of the BERT model, inferencing is much slower than Word2Vec, or traditional Models such as those found in Scikit-learn. The evaluation of ~2500 rows takes around 60 minutes depending on the EC2 Instance type used (GPU is preferred).
 
+**Section Recap**
 
+- Experimented with TF-IDF to look at shift in language over time
+- Build and evaluted three multi-class classification models based on three different techniques: TF-IDF+SVC, Word2Vec, BERT
+- Identified and selected a model to scale to the larger dataset
 
 
 ## Scaling Models
 
-Content to be added soon!
+We're now going to focus on scaling up our initial experiments in the Model Experimentation Notebook, and use our selected model (BlazingText), and apply it to the entire Amazon Reviews dataset of 145 million Reviews. The following section will be working with the [Model Scaling Notebook]().
+
+### Data
+
+As we're going to be using the BlazingText pre-built algorithm in supervised mode, we first need to get our data into the correct structure for it to be used for distributed training. As before, we need to upload our data to S3, however, unlike before, because our dataset is much larger now (145x the size), we need to use a different type of data structure for representing our data, which will allow the algorithm to be used in `PIPE` mode, which effectively allows for data to be streamed during the training, rather than loaded into memory all in one go.
+
+For `PIPE` mode to work, we'll need to use the AugmentedManifest dataset structure, which requires a JSON like structure, and depending on the nature of the algorithm, with each line containing either pointers to the data source (e.g. if the training source was media), or each line containing the actual information.
+
+In our example, as we're using BlazingText for supervised training, we will need the AugmentedManifest to look like:
+
+```json
+{"source": "this is a sample review", label: 0}
+{"source": "this is another sample review", label: 1}
+```
+
+It's important to note that the structure is of `jsonlines`, and the labels need to be converted to an `int` rather than the original text/string label.
+
+As shown in the `prep_data_for_supervised_blazing_text_augmented()` method, we will prepare three files, `train`, `test`, `validate`, which will be used to help us train, as well as evaluate the model with a hold-out dataset.
+
+Let's first take a look at the method we'll be using to perform a transformation of the complete dataset, and then we can understand how to process this at scale
+
+```python
+
+def download_transform_upload(configs, global_vars, manifest):
+        
+    #As we're dealing with a large dataset, we need to be strategic 
+    labels = {}
+    partNum = 0
+    for entry in manifest:
+        full_path = 's3://'+configs['bucket_name']+'/'+entry['path_with_prefix']
+        df = pd.read_csv(full_path, header=0, error_bad_lines=False, escapechar="\\")
+        print('Dataset Rows {}, Columns {}'.format(df.shape[0], df.shape[1]))
+        df = prep_data(df)
+        
+        train_file = 'amazonreviews_part_{}.train'.format(partNum)
+        test_file = 'amazonreviews_part_{}.test'.format(partNum)
+        val_file = 'amazonreviews_part_{}.validate'.format(partNum)
+
+\       labels = prep_data_for_supervised_blazing_text_augmented(df, configs,labels, train_file, test_file, val_file)
+
+        #upload new train file
+        configs = upload_corpus_to_s3(configs, global_vars, train_file , test_file, val_file)         
+        #delete local file
+        remove_local_file(train_file)
+        remove_local_file(test_file)
+        remove_local_file(val_file)
+        #increment part_number for filename
+        partNum += 1
+        print(labels)
+        
+```
+
+As before, we're using the data manifest file which we initially create to obtain all the S3 paths for our part files which were generated during our initially AWS GLUE preprocessing step. The for each of the entries in this manifes (which is effectively a csv file with all reviews within a given timeframe, we will apply our AugmentedManifest transformation, save the file locally,  upload it back to S3, and finally delete the local file. 
+
+The limitation of this method if that it requires downloading and processing locally, so an optimized implementation would be to use AWS Glue with Spark to process this data and store it in JSON. For more information on this, please see the ETL output types [here](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format.html).
+
+Finally, as the BlazingText supervised mode only supports pipe mode with one input file for the data channels, we will need to concatenate all files in the `train`, `test`, and `validate` S3 folder into their own respective files. In order to do this, we use the `S3Concat` library:
+
+```python
+#train file
+    job_train = S3Concat(configs['bucket_name'], 
+                         s3_concat_file_path_train, 
+                         min_file_size,
+                         content_type='application/json',
+                         session=boto3.session.Session()
+                        )
+    
+    job_train.add_files(s3_train_path)
+    job_train.concat(small_parts_threads=32)
+...
+```
+
+Before we finish processing the data, as we've transformed our class labels from their string representation (e.g. 'Books') to an numerical mapping, we should save this for future use, as the BlazingText model will not know the mapping. This can easily be acheived by pickling the labels.
+
+```python
+
+def save_labels_lookup(labels, filename = 'class_labels.pkl'):
+    
+    pickle.dump(labels,open(filename, "wb" ) )
+   
+```
+
+### Training
+
+As we're going to be training with 145 million records, it's going to be important from a computational cost perspective to ensure that we use sensible hyperparameters for our model. Luckily, in our previous stage of our project, we decided to evaluate our HyperParameters using Sagemaker's Hyperparameter tuning functionality. Now whilst our previous dataset and tuning job were only based on 1.5 million records, our sample was based on a representative sample of the total population of data. Thus, weour sampple and population should share a similar data distribution, which in theory, means that the settings of the hyperparameters based on the previous experiments would be a reasonable place to start.
+
+The code to execute the training on the larger dataset is similar to before for the BlazingText model, however, there are a few different changes. We first need to set the `input_mode` to `PIPE` in our Estimator object. We wil then need to configure our data channels to support the AugmentedManifest structure. 
+
+```python
+
+ attribute_names = ["source","label"]
+
+    
+train_data = sagemaker.session.s3_input(s3train_manifest, 
+                                        distribution='FullyReplicated', 
+                                        content_type='application/jsonlines', 
+                                        s3_data_type='AugmentedManifestFile',
+                                        attribute_names=attribute_names,
+                                        record_wrapping='RecordIO' 
+                                       )
+
+validation_data = sagemaker.session.s3_input(s3validation_manifest, 
+                                             distribution='FullyReplicated', 
+                                             content_type='application/jsonlines', 
+                                             s3_data_type='AugmentedManifestFile',
+                                             attribute_names=attribute_names,
+                                             record_wrapping='RecordIO'
+                                            )
+```
+
+As shown above, when using AugmentedManifest, the `s3_input` requires the `attribute_name` parameter, which is a list of field names, as defined in our training/test file. we also need to set the `record_wrapping` to `RecordIO`, however, we dont have to convert our data into this format, SageMaker will do this for us.
+
+We can now execute the training cycle, which will kick off the distributed training job via AWS ECS. As the dataset is much larger than before, the training time will take significantly longer. For a `ml.c5.18xlarge` instance, the training job took 16 Hours to complete.
+
+### Evaluation
+
+
 
 
 ## Graphing Data
