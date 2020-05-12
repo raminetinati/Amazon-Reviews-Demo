@@ -783,7 +783,54 @@ If we take a look at the `generate_hyperparameter_tuning_config()` method in the
 - Running more hyperparameter tuning jobs concurrently gets more work done quickly, but a tuning job improves only through successive rounds of experiments. Typically, running one training job at a time achieves the best results with the least amount of compute time.
 - It's also important to be aware of what happens when you training in a distributed manner (e.g. when instance count > 1). When a training job runs on multiple instances, hyperparameter tuning uses the last-reported objective metric value from all instances of that training job as the value of the objective metric for that training job. Design distributed training jobs so that the objective metric reported is the one that you want. This will affect parallel running jobs.
 
-After creating the `tuning_job_config`, we need to create the `training_job_definition`, which is very similar to before; we point to the training and validation data S3 locations, and also provide the definition with which type of instances and the running time that will be used. Finally we can then call the `create_hyper_parameter_tuning_job` as shown below.
+After creating the `tuning_job_config`, we need to create the `training_job_definition`, which is very similar to before; we point to the training and validation data S3 locations, and also provide the definition with which type of instances and the running time that will be used. 
+
+```json
+ "IntegerParameterRanges": [
+        {
+          "MaxValue": "10",
+          "MinValue": "2",
+          "Name": "word_ngrams",
+          "ScalingType": "Auto"
+        },
+        {
+          "MaxValue": "300",
+          "MinValue": "32",
+          "Name": "vector_dim",
+          "ScalingType": "Auto"
+        },
+        {
+          "MaxValue": "20",
+          "MinValue": "1",
+          "Name": "window_size",
+          "ScalingType": "Auto"
+        },
+        {
+          "MaxValue": "50",
+          "MinValue": "5",
+          "Name": "epochs",
+          "ScalingType": "Auto"
+        },
+        {
+          "MaxValue": "25",
+          "MinValue": "2",
+          "Name": "negative_samples",
+          "ScalingType": "Auto"
+        }
+      ]
+    },
+    "ResourceLimits": {
+      "MaxNumberOfTrainingJobs": 50,
+      "MaxParallelTrainingJobs": 1
+    },
+    "Strategy": "Bayesian",
+    "HyperParameterTuningJobObjective": {
+      "MetricName": "validation:accuracy",
+      "Type": "Maximize"
+    }
+```
+
+Finally we can then call the `create_hyper_parameter_tuning_job` as shown below.
 
 ```python
 tuning_job_name = job_name
@@ -919,7 +966,9 @@ prediction = inference_pipeline(TEXT_TO_CLASSIFY)
 
 ```
 
-Due to the complexity of the BERT model, inferencing is much slower than Word2Vec, or traditional Models such as those found in Scikit-learn. The evaluation of ~2500 rows takes around 60 minutes depending on the EC2 Instance type used (GPU is preferred).
+Due to the complexity of the BERT model, inferencing is much slower than Word2Vec, or traditional Models such as those found in Scikit-learn. The evaluation of ~2500 rows takes around 180 minutes depending on the EC2 Instance type used (GPU is preferred).
+
+As the inferencing time is extremely slow, we only perform evaluation on a 1% sample of the sample test dataframe, and we acheived a weighted average Precision of 62% and Recall of 61% (on 2,875 records).
 
 **Section Recap**
 
@@ -930,9 +979,9 @@ Due to the complexity of the BERT model, inferencing is much slower than Word2Ve
 
 ## Scaling Models
 
-We're now going to focus on scaling up our initial experiments in the Model Experimentation Notebook, and use our selected model (BlazingText), and apply it to the entire Amazon Reviews dataset of 145 million Reviews. The following section will be working with the [Model Scaling Notebook]().
+We're now going to focus on scaling up our initial experiments in the Model Experimentation Notebook, and use our selected model (BlazingText), and apply it to the entire Amazon Reviews dataset of 145 million Reviews. The following section will be working with the [Model Scaling Notebook](). We will use the Word2Vec model due to the balance between training time and accuracy of the model, compared to TF-IDF (slow training time as classifier needs to be used to model the TF-IDF scores) and BERT (slow inferencing speed).
 
-### Data
+### Data Preparation - 3.7 Billion Words
 
 As we're going to be using the BlazingText pre-built algorithm in supervised mode, we first need to get our data into the correct structure for it to be used for distributed training. As before, we need to upload our data to S3, however, unlike before, because our dataset is much larger now (145x the size), we need to use a different type of data structure for representing our data, which will allow the algorithm to be used in `PIPE` mode, which effectively allows for data to be streamed during the training, rather than loaded into memory all in one go.
 
@@ -1061,8 +1110,6 @@ As shown in the snippit above, the response from the BlazingText Model will prep
 
 
 
-
-
 ## Graphing Data
 
 Content to be added soon!
@@ -1078,7 +1125,6 @@ Content to be added soon!
 
 
 Content to be added soon!
-
 
 
 ## Wrap Up
