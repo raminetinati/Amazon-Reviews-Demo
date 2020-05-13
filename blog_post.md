@@ -1190,7 +1190,20 @@ for idx,row in df.iterrows():
         
 ```
 
-The above code snipping transforms our DataFame into an graph structure, where nodes have thier own unique properties, and edges, depending on the edge, can have properties as well. 
+The above code snipping transforms our DataFame into an graph structure, where nodes have thier own unique properties, and edges, depending on the edge, can have properties as well. We're now able to perform simple queries on our data, such as returning all the products and their neighbouring nodes which are within a specific `product_category`:
+
+```python
+
+# Find all edges where the Product Category is Video_Gamed
+result = graph.get_edges(label='ASSIGNED', 
+                                tail = sample_graph.get_or_create_vertex(
+                                    "assigned_product_category", 
+                                    name='Video_Games'
+                                )
+    )
+   
+# Provide me all vertices  
+graph.get_vertex(result.all()[0].as_dict()['head_id']).as_dict()
 
 
 
