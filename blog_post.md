@@ -1127,6 +1127,72 @@ To structure this data, we're going to use the following graph structure to repr
 ![AWS Reviews Graph Structure](img/aws_reviews_graph_structure.png)
 
 
+For our graphing solution, we're going to demonstrate this using the [Rukuki](https://ruruki.readthedocs.io/) implementation, which is a in-memory graph database based on SQLlite, however, if this was to be placed in a production environment with the complete AWS Reviews dataset (or datasets where there will be million of nodes/edges), then using a Graph Database solution such as AWS [Neptune](https://aws.amazon.com/neptune/) would be required.
+
+### Creating our Graph
+
+In order to create our graph, we need to first define what will be the nodes, edges, and the type of relationships between these different elements. For our demonstration, we will use the following relationships to represent the different elements in the graph:
+
+- Product ASSIGNED Assigned_Product_Category
+- Customer BOUGHT Product
+- Customer WROTE Review
+- Review REVIEWED Product
+- Review PREDICTED Predicted_Product_Category
+
+Based on these relationships, we'll use the `Rukuki` library to construct our nodes, edges, and relationships
+
+```python
+
+graph = Graph()
+    
+# Define Relationship Types
+EDGE_BOUGHT = 'BOUGHT'
+EDGE_ASSIGNED = 'ASSIGNED'
+EDGE_WROTE = 'WROTE'
+EDGE_PREDICTED = 'PREDICTED'
+EDGE_REVIEWED = 'REVIWED'
+
+
+# Add constraints
+graph.add_vertex_constraint("product", "product_id")
+graph.add_vertex_constraint("customer", "customer_id")
+graph.add_vertex_constraint("review", "review_id")
+graph.add_vertex_constraint("predicted_product_category", "name")
+graph.add_vertex_constraint("assigned_product_category", "name")
+
+# Get all the unique product categories and add them 
+unq_product_categories = df['product_category'].unique().tolist()
+for prod_cat in unq_product_categories:
+
+    graph.get_or_create_vertex("predicted_product_category", name=prod_cat)
+    graph.get_or_create_vertex("assigned_product_category", name=prod_cat)
+
+# Iterate and add either vertexes or edges
+for idx,row in df.iterrows():
+
+    # Create Vertex
+    customer = graph.get_or_create_vertex("customer", customer_id=row['customer_id'])
+    product = graph.get_or_create_vertex("product", product_id=row['product_id'], product_name = row['product_title'])
+    review = graph.get_or_create_vertex("review", 
+                                        review_id=row['review_id'], 
+                                        review_date=row['review_date'], 
+                                        star_rating=row['star_rating'],
+                                        review_text_processed=row['review_body_processed'],
+                                       )
+
+    cat_assigned = graph.get_or_create_vertex("assigned_product_category", name=row['product_category'])
+    
+    #Create Edge
+    graph.get_or_create_edge(customer, EDGE_BOUGHT, product)
+    graph.get_or_create_edge(customer, EDGE_WROTE, review)
+    graph.get_or_create_edge(product, EDGE_REVIEWED, review)
+    graph.get_or_create_edge(product, EDGE_ASSIGNED, cat_assigned)
+        
+```
+
+The above code snipping transforms our DataFame into an graph structure, where nodes have thier own unique properties, and edges, depending on the edge, can have properties as well. 
+
+
 
 ## Testing Framework
 
