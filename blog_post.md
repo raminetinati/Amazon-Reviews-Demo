@@ -1202,10 +1202,9 @@ result = graph.get_edges(label='ASSIGNED',
                                 )
     )
    
-# Provide me all vertices  
-graph.get_vertex(result.all()[0].as_dict()['head_id']).as_dict()
-
-
+# Provide all vertices  
+graph.get_vertex(result.all())
+```
 
 ## Testing Framework
 
