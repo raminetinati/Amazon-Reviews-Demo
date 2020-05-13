@@ -1115,7 +1115,6 @@ As shown in the snippit above, the response from the BlazingText Model will prep
 Content to be added soon!
 
 
-
 ## Testing Framework
 
 Content to be added soon!
