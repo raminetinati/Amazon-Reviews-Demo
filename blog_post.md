@@ -1106,13 +1106,26 @@ for pred in predictions:
             y_hat.append('UNKNOWN')
 ```
 
-As shown in the snippit above, the response from the BlazingText Model will prepend the label with the String `__label__`, which will need to be removed before we can perform a lookup using our label mapping.
+As shown in the snippit above, the response from the BlazingText Model will prepend the label with the String `__label__`, which will need to be removed before we can perform a lookup using our label mapping. We can then apply the same evaluation approach as before, and just increase the batch size to ensure we perform inferencing at a reasonable rate.
 
+Based on the optimized hyperparameters from the previous experimental stage, we obtain a precision of 62.3% and recall of 61%. If we're looking at getting the model's accuracy higher (towards to the 80% mark), we'll need to work harder with the features we have, potentially performing richer filtering prior to using Word2Vec, or potentially splitting the review_body into small chunks and using multiple models for predictive purposes.
+
+**Section Recap**
+
+- How to scale up the BlazingText built-in Algorithm 
+- Processing Large text datasets and converting to AugmentedManifest Files
+- Training a large scale BlazingText model
+- Deploying and Evaluation of a model
 
 
 ## Graphing Data
 
-Content to be added soon!
+In the previous sections we've examined how to take raw data, understand the characteristics of the data, and then using AWS Sagemaker to train various models to perform predictive tasks. We're now at the point where we have a model which is able to predict the product_category of a review to a reasonable level of accuracy, thus we now can think about how to manage this data. In this section we're going to take a look at representing the data as a graph, which allows us to express relationships between the different attributes found in the original dataset: Products, Customers, Reviews, Categories.
+
+To structure this data, we're going to use the following graph structure to represent out data:
+
+![Record Count](img/aws_reviews_graph_structure.png)
+
 
 
 ## Testing Framework
