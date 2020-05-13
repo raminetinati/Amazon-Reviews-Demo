@@ -1124,7 +1124,7 @@ In the previous sections we've examined how to take raw data, understand the cha
 
 To structure this data, we're going to use the following graph structure to represent out data:
 
-![Record Count](img/aws_reviews_graph_structure.png)
+![AWS Reviews Graph Structure](img/aws_reviews_graph_structure.png)
 
 
 
