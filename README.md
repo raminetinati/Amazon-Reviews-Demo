@@ -43,18 +43,18 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 - [Data Experimentation](#data-experimentation-heading) - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
     - Representative Samples
     - Descriptive Analysis
-- [Model Experimentation]() - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
+- [Model Experimentation](#model-experimentation) - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
     - TF-IDF
     - Word Embeddings
     - Transformers
-- [Modelling Scaling]() - Based on the model experiments, we'll scale up the model which yields the most suitable results for our use case
+- [Modelling Scaling](#scaling-models) - Based on the model experiments, we'll scale up the model which yields the most suitable results for our use case
     - Word2Vec: Scaling to 150 million records
-- [Graphing Data]() - Once we've established the correct models to acheive our predictive tasks, we need to find a way to structure our data to address some of the initial asks within the use case defined at the start of the project.
-- [Testing Framework]() - One of the critical aspects of introducting a new process within an organisation is to ensure we can test and evaluate our processes when in an operationalized state. This will involve some form of split testing. 
-- [Operationalizing]() - Finally, we need to define an architect for our solution in order to ensure we can deploy the solution which can be scaled across an organisation. We'll explore the use of Serverless services such as AWS Lambda and Step Functions to achieve this.
+- [Graphing Data](#graphing-data) - Once we've established the correct models to acheive our predictive tasks, we need to find a way to structure our data to address some of the initial asks within the use case defined at the start of the project.
+- [Testing Framework](#testing-framework) - One of the critical aspects of introducting a new process within an organisation is to ensure we can test and evaluate our processes when in an operationalized state. This will involve some form of split testing. 
+- [Operationalizing](#operationalizing) - Finally, we need to define an architect for our solution in order to ensure we can deploy the solution which can be scaled across an organisation. We'll explore the use of Serverless services such as AWS Lambda and Step Functions to achieve this.
 
 
-(#data-prep-heading) 
+(#data-preparation) 
 ## Data Preparation
 
 Let's first take a look at the data we're going to be using for this Use Case.
@@ -192,8 +192,7 @@ We've now saved our processed data back to S3, using CSV format. It's also possi
 - Used Natural Language Techniques to pre-process the data
 - Saved the Data back to Amazon S3 for downstream use
 
-(#data-experimentation-heading) 
-
+(#data-experimentation) 
 ## Data Experimentation
 
 Based on the data processed during the first part of this use case, we're now going to explore and interrogate the data to understand how we can work towards achieving our proposed use case. The Data Experimentation [Notebook]() is used to develop a representative sample of the 145 million rows, so we can first perform some local experiments before scaling up our methods to the full dataset. Whilst working with the sample dataset may not always be necessary, it's good practice to first examine different methods against the original hypothesis or business objective to understand which methods are going to be suitable going forward. In most cases, when performing rapid prototyping of models, not all aspects will be fleshed out, thus using a sample helps speed up processing, as what we're looking for is an indication that the methods being applied will be suitable, rather than full evaluation of a set of methods (although, depending on the domain, this could be useful).
@@ -426,7 +425,7 @@ Let's now move onto the next step in our process which will be to develop some i
 - Developed a series of descriptive statistics to interrogate the data sample and improved our initial assumptions and hypthesis
 
 
-
+(#model-experimentation)
 ## Model Experimentation
 
 In this section we're going to be using the [Model Experimentation]() Notebook to begin to develop richer representations of our data, with the goal of determining the predictive capability of the `review_body` text data for our original use case. We're going to start with first reloading the sample dataset which we created in the previous section, which will be used as the basic of all the models going forward. 
@@ -984,7 +983,7 @@ As the inferencing time is extremely slow, we only perform evaluation on a 1% sa
 - Build and evaluted three multi-class classification models based on three different techniques: TF-IDF+SVC, Word2Vec, BERT
 - Identified and selected a model to scale to the larger dataset
 
-
+(#scaling-models)
 ## Scaling Models
 
 We're now going to focus on scaling up our initial experiments in the Model Experimentation Notebook, and use our selected model (BlazingText), and apply it to the entire Amazon Reviews dataset of 145 million Reviews. The following section will be working with the [Model Scaling Notebook](). We will use the Word2Vec model due to the balance between training time and accuracy of the model, compared to TF-IDF (slow training time as classifier needs to be used to model the TF-IDF scores) and BERT (slow inferencing speed).
@@ -1126,6 +1125,7 @@ Based on the optimized hyperparameters from the previous experimental stage, we 
 - Deploying and Evaluation of a model
 
 
+(#graphing-data)
 ## Graphing Data
 
 In the previous sections we've examined how to take raw data, understand the characteristics of the data, and then using AWS Sagemaker to train various models to perform predictive tasks. We're now at the point where we have a model which is able to predict the product_category of a review to a reasonable level of accuracy, thus we now can think about how to manage this data. In this section we're going to take a look at representing the data as a graph, which allows us to express relationships between the different attributes found in the original dataset: Products, Customers, Reviews, Categories.
@@ -1343,12 +1343,12 @@ return  net.show("vismap.html")
 ```
 ![AWS Reviews Viz Map](img/aws_reviews_vis_map.png)
 
-
+(#testing-framework)
 ## Testing Framework
 
 Content to be added soon!
 
-
+(#operationalizing)
 ## Operationalization
 
 
