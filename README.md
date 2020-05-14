@@ -39,8 +39,8 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 
 **Contents**
 
-- [Data Preparation]() - How to use AWS Glue and SPARK to prepare and process large datasetes ready for analysis
-- [Data Experimentation]() - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
+- [Data Preparation](#data-prep-heading) - How to use AWS Glue and SPARK to prepare and process large datasetes ready for analysis
+- [Data Experimentation](#data-experimentation-heading) - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
     - Representative Samples
     - Descriptive Analysis
 - [Model Experimentation]() - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
@@ -54,7 +54,7 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 - [Operationalizing]() - Finally, we need to define an architect for our solution in order to ensure we can deploy the solution which can be scaled across an organisation. We'll explore the use of Serverless services such as AWS Lambda and Step Functions to achieve this.
 
 
-
+(#data-prep-heading) 
 ## Data Preparation
 
 Let's first take a look at the data we're going to be using for this Use Case.
@@ -192,6 +192,7 @@ We've now saved our processed data back to S3, using CSV format. It's also possi
 - Used Natural Language Techniques to pre-process the data
 - Saved the Data back to Amazon S3 for downstream use
 
+(#data-experimentation-heading) 
 
 ## Data Experimentation
 
