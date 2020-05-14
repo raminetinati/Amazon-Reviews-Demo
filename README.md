@@ -1341,6 +1341,7 @@ net.show_buttons()
 return  net.show("vismap.html")
 
 ```
+
 ![AWS Reviews Viz Map](img/aws_reviews_vis_map.png)
 
 The Network above demonstrates the visualization of the two networks of predicted labels of reviews, and the assigned labels of reviews (as a feature of the product). 
@@ -1350,15 +1351,19 @@ The Network above demonstrates the visualization of the two networks of predicte
 - Red Edges: Predicted Category
 - Black: Assigned Category
 
-The red edges represet the predictions, and the 
+Just from a visual inspection we can start to clusters around specifc product categories of predicted and actuals, which could require further inspection.
+
+**Section Recap**
+
+- Transforming AWS Reviews Data into a Graph Structure
+- Adding Predictions to the Graph
+- Querying and Visualizing the Graph
 
 
-(#testing-framework)
 ## Testing Framework
 
 Content to be added soon!
 
-(#operationalizing)
 ## Operationalization
 
 
