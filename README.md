@@ -33,7 +33,7 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 - TF-IDF 
 - Word2Vec / BlazingText
 - BERT
-- Rukuki (graph database)
+- Ruruki (graph database)
 - Pyviz
 
 
@@ -1135,7 +1135,7 @@ To structure this data, we're going to use the following graph structure to repr
 ![AWS Reviews Graph Structure](img/aws_reviews_graph_structure.png)
 
 
-For our graphing solution, we're going to demonstrate this using the [Rukuki](https://ruruki.readthedocs.io/) implementation, which is a in-memory graph database based on SQLlite, however, if this was to be placed in a production environment with the complete AWS Reviews dataset (or datasets where there will be million of nodes/edges), then using a Graph Database solution such as AWS [Neptune](https://aws.amazon.com/neptune/) would be required.
+For our graphing solution, we're going to demonstrate this using the [ruruki](https://ruruki.readthedocs.io/) implementation, which is a in-memory graph database based on SQLlite, however, if this was to be placed in a production environment with the complete AWS Reviews dataset (or datasets where there will be million of nodes/edges), then using a Graph Database solution such as AWS [Neptune](https://aws.amazon.com/neptune/) would be required.
 
 ### Creating our Graph
 
@@ -1147,7 +1147,7 @@ In order to create our graph, we need to first define what will be the nodes, ed
 - Review REVIEWED Product
 - Review PREDICTED Product_Category
 
-Based on these relationships, we'll use the `Rukuki` library to construct our nodes, edges, and relationships
+Based on these relationships, we'll use the `ruruki` library to construct our nodes, edges, and relationships
 
 ```python
  graph = Graph()
@@ -1211,8 +1211,6 @@ result = graph.get_edges(label='ASSIGNED',
 # Provide all vertices  
 graph.get_vertex(result.all())
 ```
-
-
 
 
 ### Adding Predictions to the Graph
