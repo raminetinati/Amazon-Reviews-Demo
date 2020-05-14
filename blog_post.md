@@ -1133,67 +1133,65 @@ For our graphing solution, we're going to demonstrate this using the [Rukuki](ht
 
 In order to create our graph, we need to first define what will be the nodes, edges, and the type of relationships between these different elements. For our demonstration, we will use the following relationships to represent the different elements in the graph:
 
-- Product ASSIGNED Assigned_Product_Category
+- Product ASSIGNED Product_Category
 - Customer BOUGHT Product
 - Customer WROTE Review
 - Review REVIEWED Product
-- Review PREDICTED Predicted_Product_Category
+- Review PREDICTED Product_Category
 
 Based on these relationships, we'll use the `Rukuki` library to construct our nodes, edges, and relationships
 
 ```python
-
-graph = Graph()
+ graph = Graph()
     
-# Define Relationship Types
-EDGE_BOUGHT = 'BOUGHT'
-EDGE_ASSIGNED = 'ASSIGNED'
-EDGE_WROTE = 'WROTE'
-EDGE_PREDICTED = 'PREDICTED'
-EDGE_REVIEWED = 'REVIWED'
+    EDGE_BOUGHT = 'BOUGHT'
+    EDGE_ASSIGNED = 'ASSIGNED'
+    EDGE_WROTE = 'WROTE'
+    EDGE_PREDICTED = 'PREDICTED'
+    EDGE_REVIEWED = 'REVIWED'
 
-
-# Add constraints
-graph.add_vertex_constraint("product", "product_id")
-graph.add_vertex_constraint("customer", "customer_id")
-graph.add_vertex_constraint("review", "review_id")
-graph.add_vertex_constraint("predicted_product_category", "name")
-graph.add_vertex_constraint("assigned_product_category", "name")
-
-# Get all the unique product categories and add them 
-unq_product_categories = df['product_category'].unique().tolist()
-for prod_cat in unq_product_categories:
-
-    graph.get_or_create_vertex("predicted_product_category", name=prod_cat)
-    graph.get_or_create_vertex("assigned_product_category", name=prod_cat)
-
-# Iterate and add either vertexes or edges
-for idx,row in df.iterrows():
-
-    # Create Vertex
-    customer = graph.get_or_create_vertex("customer", customer_id=row['customer_id'])
-    product = graph.get_or_create_vertex("product", product_id=row['product_id'], product_name = row['product_title'])
-    review = graph.get_or_create_vertex("review", 
-                                        review_id=row['review_id'], 
-                                        review_date=row['review_date'], 
-                                        star_rating=row['star_rating'],
-                                        review_text_processed=row['review_body_processed'],
-                                       )
-
-    cat_assigned = graph.get_or_create_vertex("assigned_product_category", name=row['product_category'])
     
-    #Create Edge
-    graph.get_or_create_edge(customer, EDGE_BOUGHT, product)
-    graph.get_or_create_edge(customer, EDGE_WROTE, review)
-    graph.get_or_create_edge(product, EDGE_REVIEWED, review)
-    graph.get_or_create_edge(product, EDGE_ASSIGNED, cat_assigned)
+    #add constraints
+    graph.add_vertex_constraint("product", "product_id")
+    graph.add_vertex_constraint("customer", "customer_id")
+    graph.add_vertex_constraint("review", "review_id")
+#     graph.add_vertex_constraint("predicted_product_category", "name")
+    graph.add_vertex_constraint("product_category", "name")
+    
+    #let's first get all the unique product categories and add them 
+    unq_product_categories = set(df['product_category'].tolist())
+    print(unq_product_categories)
+    for prod_cat in unq_product_categories:
+        
+#         graph.get_or_create_vertex("predicted_product_category", name=prod_cat)
+        graph.get_or_create_vertex("product_category", name=prod_cat)
+    
+    #iterate and add either vertexes or edges
+    df = df.sample(frac=0.01)
+    for idx,row in df.iterrows():
+        
+        customer = graph.get_or_create_vertex("customer", customer_id=row['customer_id'])
+        product = graph.get_or_create_vertex("product", product_id=row['product_id'], product_name = row['product_title'])
+        review = graph.get_or_create_vertex("review", 
+                                            review_id=row['review_id'], 
+                                            review_date=row['review_date'], 
+                                            star_rating=row['star_rating'],
+                                            review_text_processed=row['review_body_processed'],
+                                           )
+        
+        cat_assigned = graph.get_vertices("product_category", name=row['product_category']).all()[0]
+        
+        graph.get_or_create_edge(customer, EDGE_BOUGHT, product)
+        graph.get_or_create_edge(customer, EDGE_WROTE, review)
+        graph.get_or_create_edge(product, EDGE_REVIEWED, review)
+        graph.get_or_create_edge(product, EDGE_ASSIGNED, cat_assigned)
+        
         
 ```
 
 The above code snipping transforms our DataFame into an graph structure, where nodes have thier own unique properties, and edges, depending on the edge, can have properties as well. We're now able to perform simple queries on our data, such as returning all the products and their neighbouring nodes which are within a specific `product_category`:
 
 ```python
-
 # Find all edges where the Product Category is Video_Gamed
 result = graph.get_edges(label='ASSIGNED', 
                                 tail = sample_graph.get_or_create_vertex(
@@ -1205,6 +1203,138 @@ result = graph.get_edges(label='ASSIGNED',
 # Provide all vertices  
 graph.get_vertex(result.all())
 ```
+
+
+
+
+### Adding Predictions to the Graph
+
+We can also start to use our pre-trained BlazingText model to make predictions and add nodes to the graph. To do this, we will call the SageMaker Model Endpoint in the same way as before, so first we'll need to load the EndPoint and the pickled labels in the Notebook, and then create a simple Wrapper method which allows us to return both the Predicted Category Label and Confidence score. 
+
+```python
+
+def predict_product_cat_label(model, labels, text_to_predict, is_text_tokenized=True):
+    
+    res = ''
+    if is_text_tokenized:       
+            res = str(text_to_predict).strip('][').split(', ') 
+            res = ' '.join(res)
+    else:
+        res = text_to_predict
+        
+    payload = {"instances":[res],
+                  "configuration": {"k": 1}}
+
+    
+    response = model.predict(json.dumps(payload))
+    
+    lab_indx = int(json.loads(response)[0]['label'][0].replace('__label__',''))
+    conf = float(json.loads(response)[0]['prob'][0])
+    conf = round(conf, 3)
+                 
+    lab_string = labels[lab_indx]
+        
+    return lab_string, conf
+
+```
+
+Then to add the predicted edges on the graph, we can simply iterate through the graph's review vertices:
+
+```python
+for vertex in graph.get_vertices('review'):
+        
+        pred_label, conf = predict_product_cat_label(model,
+                                  labels,
+                                  vertex.as_dict()['properties']['review_text_processed'], 
+                                  is_text_tokenized=True)
+        
+        cat_predicted = graph.get_or_create_vertex("product_category", name=pred_label)
+        
+        graph.get_or_create_edge(vertex, EDGE_PREDICTED, cat_predicted, confidence=conf)
+```
+
+We're now in the position to start to use the predictions to interrogate our data in different ways. Rethinking about our original use case on improving the categorization of products and checking correct review assignment, running queries to identify products where the review's cateogry differ from the product's assigned catogory, may reveal incorrect product assignment or categorisation.
+
+Let's take a slightly more complex example; define two sub-graphs each which represent the review-(REVIEWED-product-ASSIGNED)-product_category relationship, and the review-PREDICTED-product_category relationship:
+
+```python
+
+ results = graph.get_vertices('review').all()
+cnt = 0
+set_1_sources = []
+set_1_targets = []
+set_1_weights = []
+set_2_sources = []
+set_2_targets = []
+set_2_weights = []
+for vert in results:
+
+    review_id = vert.properties['review_id']
+
+    assinged_cat = vert.get_in_edges(
+    'REVIWED').all()[0].get_in_vertex().get_out_edges('ASSIGNED').all()[0].get_out_vertex().properties['name']
+
+    pre_cat = vert.get_out_edges('PREDICTED').all()[0].get_out_vertex().properties['name']
+
+    conf = vert.get_out_edges('PREDICTED').all()[0].properties['confidence']
+
+    if assinged_cat != pre_cat:
+#             print(assinged_cat, pre_cat)
+        cnt += 1
+        set_1_sources.append(review_id)
+        set_1_targets.append(assinged_cat)
+        set_1_weights.append(1)
+        set_2_sources.append(review_id)
+        set_2_targets.append(pre_cat)
+        set_2_weights.append(conf)
+print('Predicted Label vs Assigned Label Difference {} / {}'.format(cnt, len(results))) 
+
+set_1 = zip(set_1_sources, set_1_targets, set_1_weights)
+set_2 = zip(set_2_sources, set_2_targets, set_2_weights)
+    
+```
+
+We can now run simple network heuristics such as connectivity and modularity across these networks to determine the characteristics of the different categories, e.g. how strongly connected specific categories are, and then further interrogate the specific reviews to determine whether a specific product or review has been incorrectly assigned.
+
+We can also use visual inspections to inspect our data, as long as our queries are refined enough so that we don't end up with a very dense network of nodes and edges (aka the Spaghetti). Below is an example method to take the node, edge data which we've generated from our queries, and then plot them using `pyviz`.
+
+```python
+
+net = pyviz.network.Network(height="1200px", width="1200px", bgcolor="#222222", font_color="white", notebook=True)
+net.barnes_hut()
+
+
+for e in set_1:
+    src = e[0]
+    dst = e[1]
+    w = e[2]
+
+    net.add_node(src, src, title=src, color = 'orange', labelHighlightBold=True)
+    net.add_node(dst, dst, title=dst, color = 'green')
+    net.add_edge(src, dst, title=w, value=w, color = '')
+
+for e in set_2:
+    src = e[0]
+    dst = e[1]
+    w = e[2]
+
+    net.add_node(src, src, title=src, color = 'orange', labelHighlightBold=True)
+    net.add_node(dst, dst, title=dst, color = 'green')
+    net.add_edge(src, dst, title=w, value=w, color = 'red')    
+
+neighbor_map = net.get_adj_list()
+
+# add neighbor data to node hover data
+for node in net.nodes:
+    node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+    node["value"] = len(neighbor_map[node["id"]])
+
+net.show_buttons()
+return  net.show("vismap.html")
+
+```
+![AWS Reviews Viz Map](img/aws_reviews_vis_map.png)
+
 
 ## Testing Framework
 
