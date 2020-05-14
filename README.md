@@ -1364,7 +1364,6 @@ Content to be added soon!
 
 ## Operationalization
 
-
 Content to be added soon!
 
 
