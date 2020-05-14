@@ -39,9 +39,9 @@ The use case will use a range of AWS services and technologies, and demonstrate 
 
 **Contents**
 
-- [Data Preparation](#data-prep-heading) - How to use AWS Glue and SPARK to prepare and process large datasetes ready for analysis
-- [Data Experimentation](#data-experimentation-heading) - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
-    - Representative Samples
+- [Data Preparation](#data-preparation) - How to use AWS Glue and SPARK to prepare and process large datasetes ready for analysis
+- [Data Experimentation](#data-experimentation) - Using Amazon Sagemaker to construct a representative sample of our dataset, and inspect the characteristics of our data. 
+    - Representative Sampling
     - Descriptive Analysis
 - [Model Experimentation](#model-experimentation) - Using Amazon SageMaker's built in Algorithms, we'll apply some simple modelling techniques, and then determione which data partitioning / features work best for our tasks.
     - TF-IDF
@@ -1342,6 +1342,16 @@ return  net.show("vismap.html")
 
 ```
 ![AWS Reviews Viz Map](img/aws_reviews_vis_map.png)
+
+The Network above demonstrates the visualization of the two networks of predicted labels of reviews, and the assigned labels of reviews (as a feature of the product). 
+
+- Orange Nodes: Reviews
+- Green Nodes: Product Category
+- Red Edges: Predicted Category
+- Black: Assigned Category
+
+The red edges represet the predictions, and the 
+
 
 (#testing-framework)
 ## Testing Framework
